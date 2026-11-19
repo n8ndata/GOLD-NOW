@@ -55,6 +55,12 @@
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
         }
 
+        /* Chart controls follow the compact native-app appearance in the reference */
+        .chart-toolbar { min-height: 34px; }
+        .chart-toolbar button { min-width: 34px; }
+        .tf-btn { line-height: 1; }
+        header button svg { display: block; }
+
         /* ซ่อนแถบเลื่อนเพื่อความสะอาดตาเหมือนแอปมือถือ */
         ::-webkit-scrollbar {
             width: 0px;
@@ -132,24 +138,22 @@
             </div>
         </section>
 
-        <!-- Chart Toolbar -->
-        <div class="border-t border-b border-gray-100 flex items-center bg-white px-3 text-sm">
-            <div class="py-2 font-bold text-[#222222] border-r border-gray-100 pr-3">
-                HSH965
-            </div>
+        <!-- Chart Toolbar: compact layout matching the supplied reference -->
+        <div class="chart-toolbar border-t border-b border-gray-100 flex items-center bg-white px-3 text-[12px]">
+            <div class="py-2 font-semibold text-[#252525] border-r border-gray-100 pr-3 tracking-tight">HSH965</div>
             <button onclick="changeTimeframe('1h')" id="tf-1h" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1h</button>
             <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 text-[#0c4a7e] font-bold bg-blue-50/50 transition">4h</button>
             <button onclick="changeTimeframe('1d')" id="tf-1d" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1D</button>
-            
             <div class="ml-auto flex items-center gap-2">
-                <button onclick="toggleChartVisibility()" class="p-1.5 text-gray-400 hover:text-black transition" title="ซ่อน/แสดงกราฟ" aria-label="ซ่อนหรือแสดงกราฟ">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                <svg class="w-[19px] h-[19px] text-gray-500 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="กราฟแท่งเทียน"><path d="M6 3v18M12 2v20M18 4v16"/><rect x="4.2" y="7" width="3.6" height="7" rx=".5"/><rect x="10.2" y="5" width="3.6" height="10" rx=".5"/><rect x="16.2" y="9" width="3.6" height="6" rx=".5"/></svg>
+                <button onclick="toggleChartVisibility()" class="p-1 text-gray-400 hover:text-[#0c4a7e] transition" title="ซ่อน/แสดงกราฟ" aria-label="ซ่อนหรือแสดงกราฟ">
+                    <svg class="w-[16px] h-[16px] stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- TradingView Chart Widget Container -->
-        <div id="chart-wrapper" class="relative w-full h-[240px] bg-white border-b border-gray-100 transition-all overflow-hidden">
+        <!-- Compact candlestick chart, sized like the supplied app screenshot -->
+        <div id="chart-wrapper" class="relative w-full h-[118px] bg-white border-b border-gray-100 transition-all overflow-hidden">
             <div class="tradingview-widget-container" style="height:100%;width:100%">
                 <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
             </div>
@@ -175,7 +179,7 @@
                 </button>
             </div>
 
-            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">
+            <div class="text-center mt-1 text-[9px] text-gray-400 font-normal tracking-wide" id="live-timestamp">
                 กำลังตรวจสอบราคาทองคำ...
             </div>
         </section>
@@ -390,6 +394,26 @@
                 totalAmount: 10000.00,
                 timestamp: '2026-01-02T16:13:38.5630'
             },
+            // รายการซื้อย้อนหลังที่ผู้ใช้ยืนยัน: ราคาทองคำแท่ง 96.5% ตามประกาศรายวันของสมาคมค้าทองคำ
+            // 01/02/2568 = 44,600 บาท, 15/02/2568 = 46,150 บาท, 01/03/2568 = 46,400 บาท
+            {
+                id: 'GB962502010001', type: 'BUY',
+                weight: Number(((100000 / 44600) * BAHT_TO_GRAM).toFixed(6)),
+                status: 'COMPLETED', goldPrice: 44600, totalAmount: 100000.00,
+                timestamp: '2025-02-01T09:07:00.000', priceDate: '2025-02-01', priceSource: 'สมาคมค้าทองคำ (GTA)'
+            },
+            {
+                id: 'GB962502150002', type: 'BUY',
+                weight: Number(((50000 / 46150) * BAHT_TO_GRAM).toFixed(6)),
+                status: 'COMPLETED', goldPrice: 46150, totalAmount: 50000.00,
+                timestamp: '2025-02-15T09:07:00.000', priceDate: '2025-02-15', priceSource: 'สมาคมค้าทองคำ (GTA)'
+            },
+            {
+                id: 'GB962503010003', type: 'BUY',
+                weight: Number(((100000 / 46400) * BAHT_TO_GRAM).toFixed(6)),
+                status: 'COMPLETED', goldPrice: 46400, totalAmount: 100000.00,
+                timestamp: '2025-03-01T09:07:00.000', priceDate: '2025-03-01', priceSource: 'สมาคมค้าทองคำ (GTA)'
+            },
             {
                 id: 'GB962509250842',
                 type: 'BUY',
@@ -467,10 +491,27 @@
                 const saved = JSON.parse(raw);
                 if (!saved || !Array.isArray(saved.orders)) return buildInitialPortfolio();
                 const orders = saved.orders.filter(o => o && (o.type === 'BUY' || o.type === 'SELL') && Number.isFinite(Number(o.weight)) && Number.isFinite(Number(o.totalAmount)));
-                const totalGrams = Number(saved.totalGrams);
-                const totalCost = Number(saved.totalCost);
+                let totalGrams = Number(saved.totalGrams);
+                let totalCost = Number(saved.totalCost);
                 const cashBalance = Number(saved.cashBalance);
                 if (![totalGrams, totalCost, cashBalance].every(Number.isFinite) || totalGrams < 0 || totalCost < 0 || cashBalance < 0) return buildInitialPortfolio();
+
+                // เพิ่มประวัติที่ผู้ใช้ยืนยันให้พอร์ตเดิมเพียงครั้งเดียว โดยไม่ทับรายการที่มีอยู่
+                // ยอดเงินสดเป็นยอดคงเหลือปัจจุบัน จึงไม่หักซ้ำจากการนำเข้ารายการย้อนหลัง
+                const historicalIds = new Set(orders.map(o => o.id));
+                const importedHistory = INITIAL_ORDERS.filter(o => o.priceDate && !historicalIds.has(o.id));
+                if (importedHistory.length) {
+                    importedHistory.forEach(o => {
+                        orders.push({ ...o });
+                        if (o.type === 'BUY') {
+                            totalGrams += Number(o.weight);
+                            totalCost += Number(o.totalAmount);
+                        }
+                    });
+                    totalGrams = Number(totalGrams.toFixed(6));
+                    totalCost = Number(totalCost.toFixed(2));
+                    try { localStorage.setItem('aom-now-history-202502-march-imported', '1'); } catch (_) {}
+                }
                 return { cashBalance, totalGrams, totalCost, filter: 'ALL', orders };
             } catch (e) {
                 console.warn('Portfolio restore failed:', e);
@@ -723,6 +764,7 @@
                                     </div>
                                 </div>
                                 <p class="text-[10px] text-gray-400 mt-4">${order.timestamp}</p>
+                                ${order.priceDate ? `<p class="text-[9px] text-amber-700 mt-1">ราคาอ้างอิง ${order.priceDate.split('-').reverse().join('/')} · ${order.priceSource || 'ราคาทองย้อนหลัง'}</p>` : ''}
                             </div>
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
