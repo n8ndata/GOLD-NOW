@@ -459,6 +459,16 @@
         let currentTradeType = 'BUY';
         let inputMode = 'THB';
 
+        // ฟังก์ชันช่วยจัดรูปแบบตัวเลขกำไร/ขาดทุนให้เป็นทศนิยม 2 ตำแหน่งเสมอ
+        function formatPnlTwoDecimals(amount) {
+            const numericAmount = Number(amount) || 0;
+            const sign = numericAmount >= 0 ? '+' : '';
+            return sign + numericAmount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' ฿';
+        }
+
         // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
         window.onload = function() {
             try {
@@ -480,17 +490,11 @@
         // ฟังก์ชันดึงราคาทองคำจริงจาก API สาธารณะ หรือจำลองความเคลื่อนไหวเรียลไทม์
         async function fetchRealtimeGoldPrice() {
             try {
-                // พยายามดึงข้อมูลราคาทองคำสากลผ่าน API ฟรี (เช่น goldapi หรือ currency/metal conversion)
-                // หรือใช้กลไกจำลองความเคลื่อนไหวสมจริงอิงตามเวลาตลาด
                 const response = await fetch('https://api.metals.live/v1/spot/gold');
                 if (response.ok) {
                     const data = await response.json();
-                    // data น่าจะให้ออกมาเป็น USD per ounce แปลงเป็นบาทไทยต่อบาททอง (96.5%)
-                    // 1 ออนซ์ = 31.1035 กรัม, 1 บาททอง = 15.244 กรัม
-                    // แต่เพื่อความเสถียรและความแม่นยำสูงในแอปไทย หาก API ขัดข้องจะมี Fallback ระบบสุ่มขยับราคาตามเทรนด์
                     if (Array.isArray(data) && data.length > 0 && data[0].price) {
                         const usdPerOunce = data[0].price;
-                        // สมมติอัตราแลกเปลี่ยน THB/USD ประมาณ 34.5
                         const thbRate = 34.5;
                         const thbPerGram = (usdPerOunce * thbRate) / 31.1035;
                         const calculatedBahtGold = thbPerGram * BAHT_TO_GRAM;
@@ -503,15 +507,15 @@
                 }
                 throw new Error('API fallback');
             } catch (e) {
-                // Fallback: จำลองการขยับราคาขึ้นลงเล็กน้อยแบบเรียลไทม์ (Real-time fluctuation simulation)
-                const fluctuation = (Math.random() - 0.48) * 30; // ขยับทีละ -15 ถึง +15 บาท
+                // Fallback: จำลองการขยับราคาขึ้นลงเล็กน้อยแบบเรียลไทม์
+                const fluctuation = (Math.random() - 0.48) * 30;
                 marketState.sellPrice = Math.round(marketState.sellPrice + fluctuation);
                 marketState.buyPrice = marketState.sellPrice - SPREAD;
                 renderAll();
             }
         }
 
-        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget กลับเป็น TVC:GOLD ตามรูปแบบเดิม
+        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget
         function changeTimeframe(tf) {
             try {
                 marketState.timeframe = tf;
@@ -563,19 +567,19 @@
             }
         }
 
-        // แสดงผลสรุปพอร์ตทองคำ พร้อมหน่วย ฿
+        // แสดงผลสรุปพอร์ตทองคำ พร้อมกำไร/ขาดทุนทศนิยม 2 ตำแหน่ง
         function renderPortfolioSummary() {
             document.getElementById('total-grams').innerText = portfolio.totalGrams.toFixed(4);
             document.getElementById('total-cost').innerText = portfolio.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
 
             const currentVal = portfolio.totalGrams > 0 ? (portfolio.totalGrams / BAHT_TO_GRAM) * marketState.buyPrice : 0;
-            const pnl = currentVal - portfolio.totalCost;
+            const pnl = Number((currentVal - portfolio.totalCost).toFixed(2));
 
             document.getElementById('current-value').innerText = currentVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
             
             const pnlContainer = document.getElementById('total-pnl-container');
             const pnlEl = document.getElementById('total-pnl');
-            pnlEl.innerText = (pnl >= 0 ? '+' : '') + pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
+            pnlEl.innerText = formatPnlTwoDecimals(pnl);
 
             if (pnl >= 0) {
                 pnlContainer.className = 'flex items-center gap-1 font-bold text-[#059669]';
@@ -586,7 +590,7 @@
             }
         }
 
-        // แสดงรายการคำสั่งซื้อขายตามแท็บที่เลือก พร้อมหน่วย ฿
+        // แสดงรายการคำสั่งซื้อขายตามแท็บที่เลือก พร้อมกำไรขาดทุนทศนิยม 2 ตำแหน่ง
         function renderOrdersList() {
             const container = document.getElementById('orders-container');
             if (!container) return;
@@ -616,11 +620,12 @@
                 let orderPnl = 0;
                 if (isBuy) {
                     const nowWorth = (order.weight / BAHT_TO_GRAM) * marketState.buyPrice;
-                    orderPnl = nowWorth - order.totalAmount;
+                    orderPnl = Number((nowWorth - order.totalAmount).toFixed(2));
                 } else {
-                    orderPnl = order.realizedPnl || 0;
+                    orderPnl = Number((order.realizedPnl || 0).toFixed(2));
                 }
                 const pnlColor = orderPnl >= 0 ? 'text-[#059669]' : 'text-[#e63946]';
+                const formattedOrderPnl = formatPnlTwoDecimals(orderPnl);
 
                 const html = `
                     <div class="tx-card rounded-2xl p-4 transition hover:shadow-md">
@@ -657,7 +662,7 @@
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold ${pnlColor}">${orderPnl >= 0 ? '+' : ''}${orderPnl.toLocaleString('en-US', { minimumFractionDigits: 2 })} ฿</span>
+                                    <span class="font-bold ${pnlColor}">${formattedOrderPnl}</span>
                                 </div>
                             </div>
                         </div>
@@ -859,7 +864,7 @@
                     }
                     const avgCostPerGram = portfolio.totalGrams > 0 ? (portfolio.totalCost / portfolio.totalGrams) : 0;
                     const costSold = avgCostPerGram * tradeGrams;
-                    const realizedPnl = tradeThb - costSold;
+                    const realizedPnl = Number((tradeThb - costSold).toFixed(2));
 
                     portfolio.cashBalance = Number((portfolio.cashBalance + tradeThb).toFixed(2));
                     portfolio.totalGrams = Number(Math.max(0, portfolio.totalGrams - tradeGrams).toFixed(4));
