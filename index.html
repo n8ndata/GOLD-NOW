@@ -149,7 +149,7 @@
         </div>
 
         <!-- TradingView Chart Widget Container -->
-        <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
+        <div id="chart-wrapper" class="relative w-full h-[240px] bg-white border-b border-gray-100 transition-all overflow-hidden">
             <div class="tradingview-widget-container" style="height:100%;width:100%">
                 <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
             </div>
@@ -176,7 +176,7 @@
             </div>
 
             <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">
-                19/11/2026 02:58:12
+                กำลังตรวจสอบราคาทองคำ...
             </div>
         </section>
 
@@ -269,7 +269,7 @@
     <div id="settings-modal" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
         <div class="bg-white w-full max-w-[380px] rounded-3xl p-6 shadow-2xl">
             <div class="flex justify-between items-center pb-3 border-b border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800">ตั้งค่าระบบจำลอง</h3>
+                <h3 class="text-lg font-bold text-gray-800">ตั้งค่าระบบออม NOW</h3>
                 <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 p-1.5" aria-label="ปิด">✕</button>
             </div>
             
@@ -277,7 +277,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-500 mb-1">สถานะตลาดทองคำ</label>
                     <div class="bg-emerald-50 text-emerald-700 p-3 rounded-xl border border-emerald-100 text-xs font-medium flex items-center justify-between">
-                        <span>สถานะ: เปิดทำการซื้อขายปกติ</span>
+                        <span>สถานะราคา: เชื่อมต่อข้อมูลจากฮั่วเซ่งเฮงเมื่อ API พร้อมใช้งาน</span>
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     </div>
                 </div>
@@ -302,13 +302,18 @@
     <script>
         // ค่าคงที่สำหรับแปลงน้ำหนักทองคำ 1 บาททอง (96.5%) = 15.244 กรัม และส่วนต่างราคาซื้อขาย
         const BAHT_TO_GRAM = 15.244;
-        const SPREAD = 80;
-
-        // สถานะตลาดทองคำปัจจุบัน
+        // ส่วนต่างราคาไม่ถูกสร้างขึ้นเอง: ใช้ราคา Bid/Ask จากผู้ให้บริการโดยตรง
+        const STORAGE_KEY = 'aom-now-portfolio-v2';
+        const HSH_PRICE_ENDPOINT = 'https://apicheckpricev3.huasengheng.com/api/Values/GetPrice';
         let marketState = {
-            sellPrice: 60010,
-            buyPrice: 59930,
-            timeframe: '4h'
+            sellPrice: null, // ฮั่วเซ่งเฮงขายออก (ผู้ใช้ออมซื้อ)
+            buyPrice: null,  // ฮั่วเซ่งเฮงรับซื้อ (ผู้ใช้ออมขาย)
+            timeframe: '4h',
+            source: null,
+            updatedAt: null,
+            lastCheckedAt: null,
+            isLive: false,
+            error: null
         };
 
         // ข้อมูลประวัติรายการสั่งซื้อเริ่มต้น
@@ -438,33 +443,6 @@
                 goldPrice: 50950,
                 totalAmount: 100000.00,
                 timestamp: '2025-07-01T09:42:15.6190'
-            },
-            {
-                id: 'GB962503180412',
-                type: 'BUY',
-                weight: Number(((100000 / 48200) * BAHT_TO_GRAM).toFixed(4)),
-                status: 'COMPLETED',
-                goldPrice: 48200,
-                totalAmount: 100000.00,
-                timestamp: '2025-03-18T14:22:10.5140'
-            },
-            {
-                id: 'GB962502240275',
-                type: 'BUY',
-                weight: Number(((50000 / 46850) * BAHT_TO_GRAM).toFixed(4)),
-                status: 'COMPLETED',
-                goldPrice: 46850,
-                totalAmount: 50000.00,
-                timestamp: '2025-02-24T11:15:48.8920'
-            },
-            {
-                id: 'GB962502100118',
-                type: 'BUY',
-                weight: Number(((100000 / 46300) * BAHT_TO_GRAM).toFixed(4)),
-                status: 'COMPLETED',
-                goldPrice: 46300,
-                totalAmount: 100000.00,
-                timestamp: '2025-02-10T10:05:33.2410'
             }
         ];
 
@@ -482,7 +460,29 @@
             };
         }
 
-        let portfolio = buildInitialPortfolio();
+        function loadPortfolio() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return buildInitialPortfolio();
+                const saved = JSON.parse(raw);
+                if (!saved || !Array.isArray(saved.orders)) return buildInitialPortfolio();
+                const orders = saved.orders.filter(o => o && (o.type === 'BUY' || o.type === 'SELL') && Number.isFinite(Number(o.weight)) && Number.isFinite(Number(o.totalAmount)));
+                const totalGrams = Number(saved.totalGrams);
+                const totalCost = Number(saved.totalCost);
+                const cashBalance = Number(saved.cashBalance);
+                if (![totalGrams, totalCost, cashBalance].every(Number.isFinite) || totalGrams < 0 || totalCost < 0 || cashBalance < 0) return buildInitialPortfolio();
+                return { cashBalance, totalGrams, totalCost, filter: 'ALL', orders };
+            } catch (e) {
+                console.warn('Portfolio restore failed:', e);
+                return buildInitialPortfolio();
+            }
+        }
+        function savePortfolio() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ cashBalance: portfolio.cashBalance, totalGrams: portfolio.totalGrams, totalCost: portfolio.totalCost, orders: portfolio.orders })); }
+            catch (e) { console.error('Portfolio save failed:', e); showToast('บันทึกข้อมูลในเครื่องไม่สำเร็จ'); }
+        }
+
+        let portfolio = loadPortfolio();
         let currentTradeType = 'BUY';
         let inputMode = 'THB';
 
@@ -503,41 +503,77 @@
                 updateClock();
                 setInterval(updateClock, 1000);
                 
-                // เริ่มระบบดึงหรือจำลองราคาทองคำแบบเรียลไทม์ทุกๆ 5 วินาที
-                fetchRealtimeGoldPrice();
-                setInterval(fetchRealtimeGoldPrice, 5000);
-
                 renderAll();
+                fetchRealtimeGoldPrice();
+                // ไม่สร้างราคาเคลื่อนไหวปลอมเมื่อแหล่งข้อมูลขัดข้อง
+                setInterval(fetchRealtimeGoldPrice, 15000);
             } catch (err) {
                 console.error('Initialization error:', err);
                 showToast('เกิดข้อผิดพลาดในการเริ่มต้นระบบ');
             }
         };
 
-        // ฟังก์ชันดึงราคาทองคำจริงจาก API สาธารณะ หรือจำลองความเคลื่อนไหวเรียลไทม์
+        // ดึงราคาซื้อ/ขายจริงจาก API ของฮั่วเซ่งเฮง โดยไม่คำนวณทดแทนจาก Spot
+        function parsePrice(value) {
+            if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value : null;
+            if (typeof value !== 'string') return null;
+            const n = Number(value.replace(/[,\s฿]/g, ''));
+            return Number.isFinite(n) && n > 0 ? n : null;
+        }
+
+        // ซ่อนข้อความสถานะแหล่งราคาออกจากหน้าจอตามรูปแบบ UI เดิม
+        function setPriceStatus(message, kind = 'muted') {
+            // เก็บสถานะไว้ใน state เท่านั้น ไม่แสดงข้อความใต้ราคา
+            marketState.priceStatusMessage = message;
+            marketState.priceStatusKind = kind;
+        }
+
         async function fetchRealtimeGoldPrice() {
+            const checkedAt = new Date();
+            marketState.lastCheckedAt = checkedAt;
             try {
-                const response = await fetch('https://api.metals.live/v1/spot/gold');
-                if (response.ok) {
-                    const data = await response.json();
-                    if (Array.isArray(data) && data.length > 0 && data[0].price) {
-                        const usdPerOunce = data[0].price;
-                        const thbRate = 34.5;
-                        const thbPerGram = (usdPerOunce * thbRate) / 31.1035;
-                        const calculatedBahtGold = thbPerGram * BAHT_TO_GRAM;
-                        
-                        marketState.sellPrice = Math.round(calculatedBahtGold + (SPREAD / 2));
-                        marketState.buyPrice = marketState.sellPrice - SPREAD;
-                        renderAll();
-                        return;
-                    }
-                }
-                throw new Error('API fallback');
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000);
+                let response;
+                try {
+                    response = await fetch(HSH_PRICE_ENDPOINT, {
+                        method: 'GET', cache: 'no-store', headers: { 'Accept': 'application/json' }, signal: controller.signal
+                    });
+                } finally { clearTimeout(timeout); }
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                if (!Array.isArray(data) || !data.length) throw new Error('รูปแบบข้อมูลราคาไม่ถูกต้อง');
+
+                // เลือกรายการทองคำ 96.5% หาก API ระบุชนิดไว้; หากมีหลายรายการให้เลือกที่มีราคา Buy/Sell สมบูรณ์
+                const valid = data.map(item => ({ item, buy: parsePrice(item.Buy), sell: parsePrice(item.Sell) }))
+                    .filter(x => x.buy && x.sell && x.sell >= x.buy);
+                if (!valid.length) throw new Error('ไม่พบราคา Buy/Sell ที่ตรวจสอบได้');
+                const preferred = valid.find(x => /96[.]?5|NOW|ทองคำแท่ง|gold.?bar/i.test(String(x.item.GoldType || '') + ' ' + String(x.item.GoldCode || ''))) || valid[0];
+                const { item, buy, sell } = preferred;
+                const sourceTime = item.TimeUpdate ? new Date(item.TimeUpdate) : null;
+                if (sourceTime && !Number.isNaN(sourceTime.getTime()) && sourceTime.getTime() > Date.now() + 60000) throw new Error('เวลาจากแหล่งราคาผิดปกติ');
+
+                marketState.buyPrice = buy;
+                marketState.sellPrice = sell;
+                marketState.source = 'ฮั่วเซ่งเฮง';
+                marketState.updatedAt = sourceTime && !Number.isNaN(sourceTime.getTime()) ? sourceTime : checkedAt;
+                marketState.isLive = true;
+                marketState.error = null;
+                renderAll();
+                const timeText = item.StrTimeUpdate || ('อัปเดต ' + marketState.updatedAt.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }));
+                document.getElementById('live-timestamp').textContent = timeText;
+                setPriceStatus('● ราคาจริงจากฮั่วเซ่งเฮง · ' + (item.GoldType || item.GoldCode || 'ราคาทองคำ') + ' · ตรวจสอบ ' + checkedAt.toLocaleTimeString('th-TH'), 'ok');
             } catch (e) {
-                // Fallback: จำลองการขยับราคาขึ้นลงเล็กน้อยแบบเรียลไทม์
-                const fluctuation = (Math.random() - 0.48) * 30;
-                marketState.sellPrice = Math.round(marketState.sellPrice + fluctuation);
-                marketState.buyPrice = marketState.sellPrice - SPREAD;
+                console.warn('Gold price fetch failed:', e);
+                marketState.isLive = false;
+                marketState.error = e.message || 'เชื่อมต่อแหล่งราคาไม่ได้';
+                // คงราคาล่าสุดที่เคยยืนยันไว้ แต่แสดงสถานะชัดเจนว่าไม่ใช่ข้อมูลสด
+                if (marketState.buyPrice && marketState.sellPrice) {
+                    setPriceStatus('⚠ ราคาล่าสุดที่บันทึกไว้ · ยังยืนยันราคาใหม่ไม่ได้ (' + marketState.error + ')', 'error');
+                } else {
+                    document.getElementById('live-timestamp').textContent = 'ยังไม่มีราคาทองคำที่ตรวจสอบได้';
+                    setPriceStatus('ไม่สามารถเชื่อมต่อ API ฮั่วเซ่งเฮงได้ · กรุณาลองใหม่', 'error');
+                }
                 renderAll();
             }
         }
@@ -558,28 +594,31 @@
                 const intervalMap = { '1h': '60', '4h': '240', '1d': 'D' };
                 const container = document.querySelector('.tradingview-widget-container');
                 if (container) {
-                    container.innerHTML = `<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>`;
-                    const script = document.createElement('script');
-                    script.type = 'text/javascript';
-                    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-                    script.async = true;
-                    script.text = JSON.stringify({
-                        autosize: true,
-                        symbol: "TVC:GOLD",
+                    // ใช้ iframe embed โดยตรงเพื่อให้แสดงกราฟได้สม่ำเสมอบน Safari/iPhone
+                    const params = new URLSearchParams({
+                        symbol: 'OANDA:XAUUSD',
                         interval: intervalMap[tf] || '240',
-                        timezone: "Asia/Bangkok",
-                        theme: "light",
-                        style: "1",
-                        locale: "th",
-                        enable_publishing: false,
-                        hide_top_toolbar: true,
-                        hide_legend: true,
-                        save_image: false,
-                        calendar: false,
-                        hide_volume: true,
-                        support_host: "https://www.tradingview.com"
+                        hide_top_toolbar: '1',
+                        hide_side_toolbar: '1',
+                        symboledit: '0',
+                        saveimage: '0',
+                        theme: 'light',
+                        style: '1',
+                        timezone: 'Asia/Bangkok',
+                        locale: 'th',
+                        withdateranges: '0',
+                        hideideas: '1',
+                        toolbarbg: 'ffffff'
                     });
-                    container.appendChild(script);
+                    container.innerHTML = '';
+                    const frame = document.createElement('iframe');
+                    frame.title = 'กราฟราคาทองคำ Spot';
+                    frame.src = 'https://www.tradingview.com/widgetembed/?' + params.toString();
+                    frame.style.cssText = 'width:100%;height:100%;border:0;display:block';
+                    frame.setAttribute('loading', 'eager');
+                    frame.setAttribute('allowtransparency', 'true');
+                    frame.setAttribute('allowfullscreen', 'true');
+                    container.appendChild(frame);
                 }
             } catch (err) {
                 console.error('Chart timeframe error:', err);
@@ -599,21 +638,28 @@
             document.getElementById('total-grams').innerText = portfolio.totalGrams.toFixed(4);
             document.getElementById('total-cost').innerText = portfolio.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
 
-            const currentVal = portfolio.totalGrams > 0 ? (portfolio.totalGrams / BAHT_TO_GRAM) * marketState.buyPrice : 0;
+            const hasPrice = Number.isFinite(marketState.buyPrice) && marketState.buyPrice > 0;
+            const currentVal = hasPrice && portfolio.totalGrams > 0 ? (portfolio.totalGrams / BAHT_TO_GRAM) * marketState.buyPrice : 0;
             const pnl = Number((currentVal - portfolio.totalCost).toFixed(2));
 
-            document.getElementById('current-value').innerText = currentVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
-            
+            document.getElementById('current-value').innerText = hasPrice
+                ? currentVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿'
+                : 'รอข้อมูลราคา';
+
             const pnlContainer = document.getElementById('total-pnl-container');
             const pnlEl = document.getElementById('total-pnl');
-            pnlEl.innerText = formatPnlTwoDecimals(pnl);
-
-            if (pnl >= 0) {
-                pnlContainer.className = 'flex items-center gap-1 font-bold text-[#059669]';
-                pnlContainer.querySelector('svg').style.transform = 'rotate(0deg)';
+            if (!hasPrice) {
+                pnlEl.innerText = 'รอข้อมูลราคา';
+                pnlContainer.className = 'flex items-center gap-1 font-bold text-gray-400';
             } else {
-                pnlContainer.className = 'flex items-center gap-1 font-bold text-[#e63946]';
-                pnlContainer.querySelector('svg').style.transform = 'rotate(180deg)';
+                pnlEl.innerText = formatPnlTwoDecimals(pnl);
+                if (pnl >= 0) {
+                    pnlContainer.className = 'flex items-center gap-1 font-bold text-[#059669]';
+                    pnlContainer.querySelector('svg').style.transform = 'rotate(0deg)';
+                } else {
+                    pnlContainer.className = 'flex items-center gap-1 font-bold text-[#e63946]';
+                    pnlContainer.querySelector('svg').style.transform = 'rotate(180deg)';
+                }
             }
         }
 
@@ -646,13 +692,13 @@
 
                 let orderPnl = 0;
                 if (isBuy) {
-                    const nowWorth = (order.weight / BAHT_TO_GRAM) * marketState.buyPrice;
-                    orderPnl = Number((nowWorth - order.totalAmount).toFixed(2));
+                    const nowWorth = marketState.buyPrice ? (order.weight / BAHT_TO_GRAM) * marketState.buyPrice : null;
+                    orderPnl = nowWorth === null ? null : Number((nowWorth - order.totalAmount).toFixed(2));
                 } else {
                     orderPnl = Number((order.realizedPnl || 0).toFixed(2));
                 }
-                const pnlColor = orderPnl >= 0 ? 'text-[#059669]' : 'text-[#e63946]';
-                const formattedOrderPnl = formatPnlTwoDecimals(orderPnl);
+                const pnlColor = orderPnl === null ? 'text-gray-400' : (orderPnl >= 0 ? 'text-[#059669]' : 'text-[#e63946]');
+                const formattedOrderPnl = orderPnl === null ? 'รอราคา' : formatPnlTwoDecimals(orderPnl);
 
                 const html = `
                     <div class="tx-card rounded-2xl p-4 transition hover:shadow-md">
@@ -714,6 +760,11 @@
 
         // เปิดหน้าต่าง Modal สำหรับซื้อหรือขายทองคำ
         function openTradeModal(type) {
+            if (!marketState.buyPrice || !marketState.sellPrice) {
+                showToast('ยังไม่มีราคาทองคำจริง กรุณารอการเชื่อมต่อ');
+                fetchRealtimeGoldPrice();
+                return;
+            }
             currentTradeType = type;
             const modal = document.getElementById('trade-modal');
             const badge = document.getElementById('modal-badge');
@@ -790,11 +841,11 @@
                     if (inputMode === 'THB') {
                         input.value = Math.floor(portfolio.cashBalance);
                     } else {
-                        input.value = ((portfolio.cashBalance / activePrice) * BAHT_TO_GRAM).toFixed(4);
+                        input.value = ((portfolio.cashBalance / activePrice) * BAHT_TO_GRAM).toFixed(6);
                     }
                 } else {
                     if (inputMode === 'GRAM') {
-                        input.value = portfolio.totalGrams.toFixed(4);
+                        input.value = portfolio.totalGrams.toFixed(6);
                     } else {
                         input.value = ((portfolio.totalGrams / BAHT_TO_GRAM) * activePrice).toFixed(2);
                     }
@@ -803,7 +854,7 @@
                 if (inputMode === 'THB') {
                     input.value = val;
                 } else {
-                    input.value = ((val / activePrice) * BAHT_TO_GRAM).toFixed(4);
+                    input.value = ((val / activePrice) * BAHT_TO_GRAM).toFixed(6);
                 }
             }
             calculateTradePreview();
@@ -838,14 +889,18 @@
                 }
 
                 const activePrice = currentTradeType === 'BUY' ? marketState.sellPrice : marketState.buyPrice;
+                if (!marketState.isLive || !activePrice || activePrice <= 0) {
+                    showToast('ราคาทองยังไม่ได้รับการยืนยันล่าสุด ไม่สามารถทำรายการได้');
+                    return;
+                }
                 let tradeThb = 0;
                 let tradeGrams = 0;
 
                 if (inputMode === 'THB') {
                     tradeThb = rawVal;
-                    tradeGrams = Number(((rawVal / activePrice) * BAHT_TO_GRAM).toFixed(4));
+                    tradeGrams = Number(((rawVal / activePrice) * BAHT_TO_GRAM).toFixed(6));
                 } else {
-                    tradeGrams = Number(rawVal.toFixed(4));
+                    tradeGrams = Number(rawVal.toFixed(6));
                     tradeThb = Number(((tradeGrams / BAHT_TO_GRAM) * activePrice).toFixed(2));
                 }
 
@@ -870,7 +925,7 @@
                         return;
                     }
                     portfolio.cashBalance = Number((portfolio.cashBalance - tradeThb).toFixed(2));
-                    portfolio.totalGrams = Number((portfolio.totalGrams + tradeGrams).toFixed(4));
+                    portfolio.totalGrams = Number((portfolio.totalGrams + tradeGrams).toFixed(6));
                     portfolio.totalCost = Number((portfolio.totalCost + tradeThb).toFixed(2));
 
                     portfolio.orders.unshift({
@@ -885,7 +940,7 @@
 
                     showToast(`สั่งซื้อทองคำ ${tradeGrams.toFixed(4)} กรัม สำเร็จ!`);
                 } else {
-                    if (tradeGrams > portfolio.totalGrams) {
+                    if (tradeGrams > portfolio.totalGrams + 0.0000005) {
                         showToast('น้ำหนักทองคำในพอร์ตไม่เพียงพอ');
                         return;
                     }
@@ -894,7 +949,7 @@
                     const realizedPnl = Number((tradeThb - costSold).toFixed(2));
 
                     portfolio.cashBalance = Number((portfolio.cashBalance + tradeThb).toFixed(2));
-                    portfolio.totalGrams = Number(Math.max(0, portfolio.totalGrams - tradeGrams).toFixed(4));
+                    portfolio.totalGrams = Number(Math.max(0, portfolio.totalGrams - tradeGrams).toFixed(6));
                     portfolio.totalCost = Number(Math.max(0, portfolio.totalCost - costSold).toFixed(2));
 
                     portfolio.orders.unshift({
@@ -911,6 +966,7 @@
                     showToast(`สั่งขายทองคำ ${tradeGrams.toFixed(4)} กรัม สำเร็จ!`);
                 }
 
+                savePortfolio();
                 closeTradeModal();
                 renderAll();
             } catch (err) {
@@ -933,6 +989,7 @@
         // รีเซ็ตพอร์ตกลับเป็นรายการเริ่มต้น
         function resetToOriginalMock() {
             portfolio = buildInitialPortfolio();
+            savePortfolio();
             filterOrders('ALL');
             renderAll();
             showToast('รีเซ็ตพอร์ตกลับเป็นค่าเริ่มต้นเรียบร้อย');
@@ -947,6 +1004,7 @@
                 filter: 'ALL',
                 orders: []
             };
+            savePortfolio();
             filterOrders('ALL');
             renderAll();
             showToast('เริ่มพอร์ตใหม่ เงินสด 1,000,000 ฿');
@@ -976,8 +1034,8 @@
         function renderAll() {
             renderPortfolioSummary();
             renderOrdersList();
-            document.getElementById('hsh-buy-price').innerText = marketState.buyPrice.toLocaleString('en-US');
-            document.getElementById('hsh-sell-price').innerText = marketState.sellPrice.toLocaleString('en-US');
+            document.getElementById('hsh-buy-price').innerText = marketState.buyPrice ? marketState.buyPrice.toLocaleString('en-US') : '—';
+            document.getElementById('hsh-sell-price').innerText = marketState.sellPrice ? marketState.sellPrice.toLocaleString('en-US') : '—';
         }
     </script>
 </body>
