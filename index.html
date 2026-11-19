@@ -138,22 +138,22 @@
             </div>
         </section>
 
-        <!-- Chart Toolbar: compact layout matching the supplied reference -->
-        <div class="chart-toolbar border-t border-b border-gray-100 flex items-center bg-white px-3 text-[12px]">
-            <div class="py-2 font-semibold text-[#252525] border-r border-gray-100 pr-3 tracking-tight">HSH965</div>
-            <button onclick="changeTimeframe('1h')" id="tf-1h" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1h</button>
-            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 text-[#0c4a7e] font-bold bg-blue-50/50 transition">4h</button>
-            <button onclick="changeTimeframe('1d')" id="tf-1d" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1D</button>
-            <div class="ml-auto flex items-center gap-2">
-                <svg class="w-[19px] h-[19px] text-gray-500 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="กราฟแท่งเทียน"><path d="M6 3v18M12 2v20M18 4v16"/><rect x="4.2" y="7" width="3.6" height="7" rx=".5"/><rect x="10.2" y="5" width="3.6" height="10" rx=".5"/><rect x="16.2" y="9" width="3.6" height="6" rx=".5"/></svg>
-                <button onclick="toggleChartVisibility()" class="p-1 text-gray-400 hover:text-[#0c4a7e] transition" title="ซ่อน/แสดงกราฟ" aria-label="ซ่อนหรือแสดงกราฟ">
-                    <svg class="w-[16px] h-[16px] stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
+        <!-- Chart toolbar: simple HSH965 / 4h / candlestick controls as in the reference -->
+        <div class="chart-toolbar border-t border-b border-gray-100 flex items-center bg-white px-3 text-[13px]">
+            <div class="py-2.5 font-bold text-[14px] text-[#252525] border-r border-gray-200 pr-3 tracking-tight">HSH965</div>
+            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-3 py-2.5 text-[#252525] font-medium border-r border-gray-200 transition" aria-label="ช่วงเวลา 4 ชั่วโมง">4h</button>
+            <div class="flex items-center px-3 text-[#252525]" aria-label="กราฟแท่งเทียน">
+                <svg class="w-[20px] h-[22px] stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Candlestick"><path d="M7 2v20M17 2v20"/><rect x="4.5" y="6" width="5" height="9" rx=".4"/><rect x="14.5" y="4" width="5" height="12" rx=".4"/></svg>
+            </div>
+            <div class="ml-auto">
+                <button onclick="toggleChartVisibility()" class="p-1.5 text-gray-400 hover:text-[#0c4a7e] transition" title="ซ่อน/แสดงกราฟ" aria-label="ซ่อนหรือแสดงกราฟ">
+                    <svg class="w-[17px] h-[17px] stroke-current fill-none" viewBox="0 0 24 24" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- Compact candlestick chart, sized like the supplied app screenshot -->
-        <div id="chart-wrapper" class="relative w-full h-[118px] bg-white border-b border-gray-100 transition-all overflow-hidden">
+        <!-- Candlestick chart with enough vertical space for candles and right price scale -->
+        <div id="chart-wrapper" class="relative w-full h-[170px] bg-white border-b border-gray-100 transition-all overflow-hidden">
             <div class="tradingview-widget-container" style="height:100%;width:100%">
                 <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
             </div>
@@ -641,6 +641,8 @@
                         interval: intervalMap[tf] || '240',
                         hide_top_toolbar: '1',
                         hide_side_toolbar: '1',
+                        hide_legend: '1',
+                        hide_volume: '1',
                         symboledit: '0',
                         saveimage: '0',
                         theme: 'light',
