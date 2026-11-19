@@ -152,11 +152,10 @@
             </div>
         </div>
 
-        <!-- Candlestick chart with enough vertical space for candles and right price scale -->
+        <!-- HSH965 candlestick chart: compact native-app layout -->
         <div id="chart-wrapper" class="relative w-full h-[170px] bg-white border-b border-gray-100 transition-all overflow-hidden">
-            <div class="tradingview-widget-container" style="height:100%;width:100%">
-                <div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>
-            </div>
+            <div id="hsh965-chart" role="img" aria-label="กราฟแท่งเทียนราคาทองคำ HSH965 จากข้อมูลราคาฮั่วเซ่งเฮง" style="height:100%;width:100%"></div>
+            <div id="chart-empty" class="absolute inset-0 flex items-center justify-center text-[11px] text-gray-400 pointer-events-none">กำลังรอข้อมูลราคา HSH965</div>
         </div>
 
         <!-- Buy / Sell Action Buttons -->
@@ -319,6 +318,13 @@
             isLive: false,
             error: null
         };
+        // กราฟ HSH965 ใช้เฉพาะราคาซื้อ/ขายที่ได้รับจาก API ฮั่วเซ่งเฮง
+        // เก็บแท่งเทียนที่สังเกตได้จริงในเครื่องนี้ ไม่สร้างข้อมูลย้อนหลังหรือราคาเทียม
+        const HSH_CHART_STORAGE_KEY = 'aom-now-hsh965-candles-v1';
+        const HSH_CANDLE_SECONDS = 4 * 60 * 60;
+        let hshChart = null;
+        let hshCandleSeries = null;
+        let hshCandles = [];
 
         // ข้อมูลประวัติรายการสั่งซื้อเริ่มต้น
         const INITIAL_ORDERS = [
@@ -540,6 +546,7 @@
         // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
         window.onload = function() {
             try {
+                initHshChart();
                 changeTimeframe(marketState.timeframe);
                 updateClock();
                 setInterval(updateClock, 1000);
@@ -600,6 +607,7 @@
                 marketState.updatedAt = sourceTime && !Number.isNaN(sourceTime.getTime()) ? sourceTime : checkedAt;
                 marketState.isLive = true;
                 marketState.error = null;
+                updateHshChartFromQuote(buy, sell, marketState.updatedAt);
                 renderAll();
                 const timeText = item.StrTimeUpdate || ('อัปเดต ' + marketState.updatedAt.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }));
                 document.getElementById('live-timestamp').textContent = timeText;
@@ -619,53 +627,86 @@
             }
         }
 
-        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget
+        // เลือกช่วงเวลาแท่งเทียน HSH965 (ค่าเริ่มต้น 4 ชั่วโมง)
         function changeTimeframe(tf) {
-            try {
-                marketState.timeframe = tf;
-                document.querySelectorAll('.tf-btn').forEach(btn => {
-                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                    btn.classList.add('text-gray-500', 'font-medium');
-                });
-                const active = document.getElementById('tf-' + tf);
-                if (active) {
-                    active.classList.remove('text-gray-500', 'font-medium');
-                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                }
-                const intervalMap = { '1h': '60', '4h': '240', '1d': 'D' };
-                const container = document.querySelector('.tradingview-widget-container');
-                if (container) {
-                    // ใช้ iframe embed โดยตรงเพื่อให้แสดงกราฟได้สม่ำเสมอบน Safari/iPhone
-                    const params = new URLSearchParams({
-                        symbol: 'OANDA:XAUUSD',
-                        interval: intervalMap[tf] || '240',
-                        hide_top_toolbar: '1',
-                        hide_side_toolbar: '1',
-                        hide_legend: '1',
-                        hide_volume: '1',
-                        symboledit: '0',
-                        saveimage: '0',
-                        theme: 'light',
-                        style: '1',
-                        timezone: 'Asia/Bangkok',
-                        locale: 'th',
-                        withdateranges: '0',
-                        hideideas: '1',
-                        toolbarbg: 'ffffff'
-                    });
-                    container.innerHTML = '';
-                    const frame = document.createElement('iframe');
-                    frame.title = 'กราฟราคาทองคำ Spot';
-                    frame.src = 'https://www.tradingview.com/widgetembed/?' + params.toString();
-                    frame.style.cssText = 'width:100%;height:100%;border:0;display:block';
-                    frame.setAttribute('loading', 'eager');
-                    frame.setAttribute('allowtransparency', 'true');
-                    frame.setAttribute('allowfullscreen', 'true');
-                    container.appendChild(frame);
-                }
-            } catch (err) {
-                console.error('Chart timeframe error:', err);
+            marketState.timeframe = tf || '4h';
+            document.querySelectorAll('.tf-btn').forEach(btn => {
+                btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
+                btn.classList.add('text-gray-500', 'font-medium');
+            });
+            const active = document.getElementById('tf-' + marketState.timeframe);
+            if (active) {
+                active.classList.remove('text-gray-500', 'font-medium');
+                active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
             }
+            if (hshChart) hshChart.timeScale().fitContent();
+        }
+
+        // สร้างกราฟแท่งเทียนแบบเรียบง่ายตามหน้าจอ GOLD NOW
+        function initHshChart() {
+            const host = document.getElementById('hsh965-chart');
+            if (!host || !window.LightweightCharts) {
+                const empty = document.getElementById('chart-empty');
+                if (empty) empty.textContent = 'ไม่สามารถโหลดกราฟได้';
+                return;
+            }
+            try {
+                hshCandles = JSON.parse(localStorage.getItem(HSH_CHART_STORAGE_KEY) || '[]');
+                if (!Array.isArray(hshCandles)) hshCandles = [];
+                hshChart = LightweightCharts.createChart(host, {
+                    width: host.clientWidth || 360,
+                    height: host.clientHeight || 170,
+                    layout: { background: { color: '#ffffff' }, textColor: '#6b7280', fontFamily: 'Prompt, sans-serif', fontSize: 10 },
+                    grid: { vertLines: { color: '#eeeeee' }, horzLines: { color: '#eeeeee' } },
+                    rightPriceScale: { borderColor: '#eeeeee', scaleMargins: { top: 0.12, bottom: 0.12 } },
+                    timeScale: { borderColor: '#eeeeee', timeVisible: false, secondsVisible: false, rightOffset: 2, barSpacing: 10 },
+                    crosshair: { vertLine: { visible: false }, horzLine: { visible: false } },
+                    handleScroll: true,
+                    handleScale: true
+                });
+                hshCandleSeries = hshChart.addCandlestickSeries({
+                    upColor: '#269b83', downColor: '#e05260', borderUpColor: '#269b83', borderDownColor: '#e05260',
+                    wickUpColor: '#269b83', wickDownColor: '#e05260', priceLineVisible: true, lastValueVisible: true
+                });
+                const valid = hshCandles.filter(c => c && Number.isFinite(c.time) && c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
+                    .sort((a,b) => a.time - b.time);
+                hshCandles = valid.filter((c,i) => i === 0 || c.time > valid[i-1].time);
+                if (hshCandles.length) {
+                    hshCandleSeries.setData(hshCandles);
+                    document.getElementById('chart-empty')?.classList.add('hidden');
+                }
+                const resize = () => {
+                    if (hshChart && host.clientWidth) hshChart.applyOptions({ width: host.clientWidth, height: host.clientHeight || 170 });
+                };
+                if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
+                else window.addEventListener('resize', resize);
+            } catch (err) {
+                console.error('HSH965 chart init failed:', err);
+                const empty = document.getElementById('chart-empty');
+                if (empty) empty.textContent = 'กราฟไม่พร้อมใช้งาน';
+            }
+        }
+
+        // สร้าง/ปรับแท่ง 4h จากค่ากลางของราคา Bid/Ask ที่ API HSH ส่งมาเท่านั้น
+        function updateHshChartFromQuote(buy, sell, observedAt) {
+            if (!hshCandleSeries || !Number.isFinite(buy) || !Number.isFinite(sell)) return;
+            const price = Number(((buy + sell) / 2).toFixed(2));
+            const timestamp = Math.floor((observedAt instanceof Date ? observedAt.getTime() : Date.now()) / 1000);
+            const bucket = Math.floor(timestamp / HSH_CANDLE_SECONDS) * HSH_CANDLE_SECONDS;
+            let candle = hshCandles[hshCandles.length - 1];
+            if (!candle || candle.time !== bucket) {
+                candle = { time: bucket, open: price, high: price, low: price, close: price };
+                hshCandles.push(candle);
+            } else {
+                candle.high = Math.max(candle.high, price);
+                candle.low = Math.min(candle.low, price);
+                candle.close = price;
+            }
+            // จำกัดจำนวนแท่งเพื่อไม่ให้ localStorage โตเกินจำเป็น
+            if (hshCandles.length > 500) hshCandles = hshCandles.slice(-500);
+            hshCandleSeries.update(candle);
+            document.getElementById('chart-empty')?.classList.add('hidden');
+            try { localStorage.setItem(HSH_CHART_STORAGE_KEY, JSON.stringify(hshCandles)); } catch (e) { console.warn('Chart cache unavailable:', e); }
         }
 
         // ซ่อนหรือแสดงส่วนกราฟ
