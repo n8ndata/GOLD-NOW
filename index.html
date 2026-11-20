@@ -186,9 +186,10 @@
             </div>
         </div>
 
-        <!-- TradingView Chart Widget Container -->
+        <!-- กราฟทองต่อบาททอง (บาท) -->
         <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
-            <div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async="">{"autosize":true,"symbol":"SAXO:XAUTHB","interval":"240","timezone":"Asia/Bangkok","theme":"light","style":"1","locale":"th","enable_publishing":false,"hide_top_toolbar":true,"hide_legend":true,"save_image":false,"calendar":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}</script></div>
+            <div id="thb-chart" style="height:100%;width:100%"></div>
+            <div id="thb-chart-loading" class="absolute inset-0 flex items-center justify-center bg-white/80 text-[12px] text-gray-400 pointer-events-none">กำลังโหลดกราฟ...</div>
         </div>
         <!-- Buy / Sell Action Buttons -->
         <section class="px-4 pt-3 pb-1 bg-white">
@@ -210,7 +211,7 @@
                 </button>
             </div>
 
-            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">21/11/2026 03:08:38</div>
+            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">21/11/2026 03:36:35</div>
         </section>
 
         <!-- Transaction History Section -->
@@ -1200,6 +1201,7 @@
         //      เปิดเว็บใหม่จะโหลดจาก localStorage กลับมา ไม่ต้องกรอกใหม่
         const STORAGE_KEY = 'aom-now-portfolio-v1';
 
+
         function savePortfolio() {
             try {
                 const payload = {
@@ -1403,48 +1405,107 @@
             }
         }
 
-        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget - ใช้ SAXO:XAUTHB (ทองเป็นบาท) แทน TVC:GOLD (ทองเป็นดอลลาร์)
+        // กราฟทองต่อ 1 บาททอง (96.5%) หน่วยบาท แบบเดียวกับปุ่มซื้อขาย
+        // ที่มา: ราคา PAXG (ทอง 1 ออนซ์) เป็นบาท จาก CoinGecko แล้วแปลงเป็นต่อบาททอง
+        // สูตร: ต่อบาททอง = ต่อออนซ์ x (15.244 / 31.1034768) x 0.965
+        const THB_PER_BAHT_FACTOR = (15.244 / 31.1034768) * 0.965;
+        let thbChart = null;
+        let thbCandleSeries = null;
+        let thbChartLoading = false;
+        function formatThbAxis(price) {
+            const v = Math.round(Number(price) || 0);
+            return v.toLocaleString('en-US');
+        }
+        function initThbChart() {
+            if (thbChart) return;
+            const el = document.getElementById('thb-chart');
+            const wrapper = document.getElementById('chart-wrapper');
+            if (!el || !window.LightweightCharts) return;
+            thbChart = LightweightCharts.createChart(el, {
+                width: (wrapper ? wrapper.clientWidth : 360) || 360,
+                height: 190,
+                layout: { background: { color: '#ffffff' }, textColor: '#333333', fontFamily: "'Prompt', sans-serif", fontSize: 11 },
+                grid: { vertLines: { color: '#f0f0f0' }, horzLines: { color: '#f0f0f0' } },
+                crosshair: { mode: 1 },
+                rightPriceScale: { borderColor: '#e5e7eb', entireText: true },
+                timeScale: { borderColor: '#e5e7eb', timeVisible: true, secondsVisible: false, rightOffset: 2 }
+            });
+            thbCandleSeries = thbChart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350',
+                wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+                borderVisible: false,
+                priceFormat: { type: 'custom', formatter: formatThbAxis, minMove: 1 }
+            });
+            window.addEventListener('resize', function() {
+                if (!thbChart) return;
+                const w = document.getElementById('chart-wrapper');
+                if (w) thbChart.applyOptions({ width: w.clientWidth || 360 });
+            });
+        }
+        function buildCandlesFromPrices(prices, bucketSec) {
+            const buckets = new Map();
+            for (const p of prices) {
+                const perBaht = Number(p[1]) * THB_PER_BAHT_FACTOR;
+                if (!isFinite(perBaht)) continue;
+                const bucketStart = Math.floor(p[0] / 1000 / bucketSec) * bucketSec;
+                if (!buckets.has(bucketStart)) buckets.set(bucketStart, []);
+                buckets.get(bucketStart).push(perBaht);
+            }
+            const candles = [];
+            const keys = Array.from(buckets.keys()).sort(function(a,b){return a-b;});
+            for (const k of keys) {
+                const arr = buckets.get(k);
+                candles.push({ time: k, open: arr[0], high: Math.max.apply(null, arr), low: Math.min.apply(null, arr), close: arr[arr.length-1] });
+            }
+            return candles;
+        }
+        function buildCandlesFromBinanceKlines(klines, usdThb) {
+            return klines.map(function(k) {
+                return { time: Math.floor(Number(k[0])/1000), open: Number(k[1])*usdThb*THB_PER_BAHT_FACTOR, high: Number(k[2])*usdThb*THB_PER_BAHT_FACTOR, low: Number(k[3])*usdThb*THB_PER_BAHT_FACTOR, close: Number(k[4])*usdThb*THB_PER_BAHT_FACTOR };
+            }).filter(function(c){return isFinite(c.close);});
+        }
+        async function loadThbChart(tf) {
+            if (thbChartLoading) return;
+            initThbChart();
+            if (!thbCandleSeries) return;
+            thbChartLoading = true;
+            const loadingEl = document.getElementById('thb-chart-loading');
+            if (loadingEl) { loadingEl.style.display='flex'; loadingEl.innerText='กำลังโหลดกราฟ...'; }
+            try {
+                const cfg = tf==='1h' ? {days:2,bucketSec:3600} : tf==='1d' ? {days:90,bucketSec:86400} : {days:14,bucketSec:14400};
+                let candles=[];
+                try {
+                    const data = await fetchJsonWithProxy('https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=thb&days='+cfg.days);
+                    if (data && data.prices && data.prices.length) candles = buildCandlesFromPrices(data.prices, cfg.bucketSec);
+                } catch(e){ console.warn('CoinGecko chart failed:', e.message); }
+                if (!candles.length) {
+                    const interval = tf==='1h' ? '1h' : tf==='1d' ? '1d' : '4h';
+                    const limit = tf==='1d' ? 90 : tf==='1h' ? 48 : 84;
+                    const klines = await fetchJsonWithProxy('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval='+interval+'&limit='+limit);
+                    const fx = await fetchJsonWithProxy('https://open.er-api.com/v6/latest/USD');
+                    const usdThb = fx && fx.rates && fx.rates.THB ? Number(fx.rates.THB) : 35;
+                    candles = buildCandlesFromBinanceKlines(klines, usdThb);
+                }
+                if (!candles.length) throw new Error('no candles');
+                const anchor = Number(marketState.sellPrice) || candles[candles.length-1].close;
+                const scale = candles[candles.length-1].close>0 ? anchor/candles[candles.length-1].close : 1;
+                if (isFinite(scale) && scale>0.5 && scale<2) candles = candles.map(function(c){return {time:c.time,open:c.open*scale,high:c.high*scale,low:c.low*scale,close:c.close*scale};});
+                thbCandleSeries.setData(candles);
+                if (thbChart) thbChart.timeScale().scrollToRealTime();
+                if (loadingEl) loadingEl.style.display='none';
+            } catch(e){
+                console.warn('Load THB chart failed:', e.message);
+                if (loadingEl){loadingEl.style.display='flex'; loadingEl.innerText='โหลดกราฟไม่ได้ ลองกดเปลี่ยน Timeframe อีกครั้ง';}
+            } finally { thbChartLoading=false; }
+        }
         function changeTimeframe(tf) {
             try {
-                marketState.timeframe = tf;
-                document.querySelectorAll('.tf-btn').forEach(btn => {
-                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                    btn.classList.add('text-gray-500', 'font-medium');
-                });
-                const active = document.getElementById('tf-' + tf);
-                if (active) {
-                    active.classList.remove('text-gray-500', 'font-medium');
-                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                }
-                const intervalMap = { '1h': '60', '4h': '240', '1d': 'D' };
-                const container = document.querySelector('.tradingview-widget-container');
-                if (container) {
-                    container.innerHTML = `<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>`;
-                    const script = document.createElement('script');
-                    script.type = 'text/javascript';
-                    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-                    script.async = true;
-                    script.text = JSON.stringify({
-                        autosize: true,
-                        symbol: "SAXO:XAUTHB",
-                        interval: intervalMap[tf] || '240',
-                        timezone: "Asia/Bangkok",
-                        theme: "light",
-                        style: "1",
-                        locale: "th",
-                        enable_publishing: false,
-                        hide_top_toolbar: true,
-                        hide_legend: true,
-                        save_image: false,
-                        calendar: false,
-                        hide_volume: true,
-                        support_host: "https://www.tradingview.com"
-                    });
-                    container.appendChild(script);
-                }
-            } catch (err) {
-                console.error('Chart timeframe error:', err);
-            }
+                marketState.timeframe=tf;
+                document.querySelectorAll('.tf-btn').forEach(function(btn){btn.classList.remove('text-[#0c4a7e]','font-bold','bg-blue-50/50');btn.classList.add('text-gray-500','font-medium');});
+                const active=document.getElementById('tf-'+tf);
+                if(active){active.classList.remove('text-gray-500','font-medium');active.classList.add('text-[#0c4a7e]','font-bold','bg-blue-50/50');}
+                loadThbChart(tf);
+            } catch(err){ console.error('Chart timeframe error:', err); }
         }
 
         // ซ่อนหรือแสดงส่วนกราฟ
@@ -1452,6 +1513,9 @@
             const wrapper = document.getElementById('chart-wrapper');
             if (wrapper) {
                 wrapper.classList.toggle('hidden');
+                if (!wrapper.classList.contains('hidden') && thbChart) {
+                    setTimeout(function() { thbChart.applyOptions({ width: wrapper.clientWidth || 360 }); }, 50);
+                }
             }
         }
 
@@ -1845,5 +1909,5 @@
             document.getElementById('hsh-sell-price').innerText = marketState.sellPrice.toLocaleString('en-US');
         }
     </script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
+
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
