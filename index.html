@@ -211,7 +211,7 @@
                 </button>
             </div>
 
-            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">21/11/2026 03:36:35</div>
+            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">21/11/2026 03:46:12</div>
         </section>
 
         <!-- Transaction History Section -->
@@ -1398,24 +1398,75 @@
                 marketState.buyPrice = Math.round(q.buy);
                 marketState.sellPrice = Math.round(q.sell);
                 lastHshUpdate = new Date();
+                pushChartTick(q.buy, q.sell);
                 renderAll();
+                refreshThbChart(marketState.timeframe || '4h');
             } catch (e) {
                 // ดึงไม่ได้ = คงราคาเดิมไว้ ไม่สุ่มราคาเอง
                 console.warn('HSH price fetch failed, keep last price:', e.message);
             }
         }
 
-        // กราฟทองต่อ 1 บาททอง (96.5%) หน่วยบาท แบบเดียวกับปุ่มซื้อขาย
-        // ที่มา: ราคา PAXG (ทอง 1 ออนซ์) เป็นบาท จาก CoinGecko แล้วแปลงเป็นต่อบาททอง
-        // สูตร: ต่อบาททอง = ต่อออนซ์ x (15.244 / 31.1034768) x 0.965
-        const THB_PER_BAHT_FACTOR = (15.244 / 31.1034768) * 0.965;
+        // กราฟราคาจริงจากแหล่งเดียวกับแอป GOLD NOW / ออม NOW
+        // แหล่งข้อมูลจริง: API ฮั่วเซ่งเฮง ตัวเดียวกับปุ่มซื้อขาย
+        // https://apicheckpricev3.huasengheng.com/api/values/getprice/
+        // HSH ไม่มี API ประวัติย้อนหลังให้ดึง (มีแค่ราคาปัจจุบัน) ดังนั้นกราฟนี้จะไม่แปลงจากแหล่งอื่น
+        // วิธีที่ถูกต้องคือ เก็บราคาจริงทุกครั้งที่แอปโพลล์ HSH (ทุก 30 วิ) ลง localStorage แล้ววาดเป็นแท่งเทียนจากราคาจริงเหล่านั้น
+        // เปิดครั้งแรกกราฟจะเริ่มจากราคาปัจจุบัน แล้วค่อยๆ สะสมเป็นเส้น/แท่งตามเวลาจริง และคงประวัติไว้เปิดครั้งหน้า
+        const CHART_TICKS_KEY = 'gold-now-hsh-chart-ticks-v1';
         let thbChart = null;
         let thbCandleSeries = null;
-        let thbChartLoading = false;
+        let thbPriceLine = null;
+
         function formatThbAxis(price) {
             const v = Math.round(Number(price) || 0);
             return v.toLocaleString('en-US');
         }
+
+        function loadChartTicks() {
+            try {
+                const raw = localStorage.getItem(CHART_TICKS_KEY);
+                if (!raw) return [];
+                const arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) return [];
+                const cutoff = Date.now() - 90 * 24 * 3600 * 1000;
+                return arr.filter(function(x) { return x && isFinite(x.t) && isFinite(x.sell) && x.t >= cutoff; }).sort(function(a, b) { return a.t - b.t; });
+            } catch (e) { return []; }
+        }
+
+        function saveChartTicks(ticks) {
+            try {
+                const trimmed = ticks.slice(-5000);
+                localStorage.setItem(CHART_TICKS_KEY, JSON.stringify(trimmed));
+            } catch (e) { /* เต็มก็ปล่อยประวัติเก่าไว้ */ }
+        }
+
+        function pushChartTick(buy, sell) {
+            if (!isFinite(sell) || sell <= 0) return;
+            const ticks = loadChartTicks();
+            const now = Date.now();
+            const last = ticks[ticks.length - 1];
+            if (last && (now - last.t) < 20000 && last.sell === Math.round(sell)) return;
+            ticks.push({ t: now, buy: Math.round(buy), sell: Math.round(sell) });
+            saveChartTicks(ticks);
+        }
+
+        function buildCandlesFromTicks(ticks, bucketSec) {
+            const buckets = new Map();
+            for (const tick of ticks) {
+                const bucketStart = Math.floor(tick.t / 1000 / bucketSec) * bucketSec;
+                if (!buckets.has(bucketStart)) buckets.set(bucketStart, []);
+                buckets.get(bucketStart).push(tick.sell);
+            }
+            const candles = [];
+            const keys = Array.from(buckets.keys()).sort(function(a, b) { return a - b; });
+            for (const k of keys) {
+                const arr = buckets.get(k);
+                candles.push({ time: k, open: arr[0], high: Math.max.apply(null, arr), low: Math.min.apply(null, arr), close: arr[arr.length - 1] });
+            }
+            return candles;
+        }
+
         function initThbChart() {
             if (thbChart) return;
             const el = document.getElementById('thb-chart');
@@ -1442,70 +1493,62 @@
                 if (w) thbChart.applyOptions({ width: w.clientWidth || 360 });
             });
         }
-        function buildCandlesFromPrices(prices, bucketSec) {
-            const buckets = new Map();
-            for (const p of prices) {
-                const perBaht = Number(p[1]) * THB_PER_BAHT_FACTOR;
-                if (!isFinite(perBaht)) continue;
-                const bucketStart = Math.floor(p[0] / 1000 / bucketSec) * bucketSec;
-                if (!buckets.has(bucketStart)) buckets.set(bucketStart, []);
-                buckets.get(bucketStart).push(perBaht);
-            }
-            const candles = [];
-            const keys = Array.from(buckets.keys()).sort(function(a,b){return a-b;});
-            for (const k of keys) {
-                const arr = buckets.get(k);
-                candles.push({ time: k, open: arr[0], high: Math.max.apply(null, arr), low: Math.min.apply(null, arr), close: arr[arr.length-1] });
-            }
-            return candles;
-        }
-        function buildCandlesFromBinanceKlines(klines, usdThb) {
-            return klines.map(function(k) {
-                return { time: Math.floor(Number(k[0])/1000), open: Number(k[1])*usdThb*THB_PER_BAHT_FACTOR, high: Number(k[2])*usdThb*THB_PER_BAHT_FACTOR, low: Number(k[3])*usdThb*THB_PER_BAHT_FACTOR, close: Number(k[4])*usdThb*THB_PER_BAHT_FACTOR };
-            }).filter(function(c){return isFinite(c.close);});
-        }
-        async function loadThbChart(tf) {
-            if (thbChartLoading) return;
+
+        function refreshThbChart(tf) {
             initThbChart();
             if (!thbCandleSeries) return;
-            thbChartLoading = true;
-            const loadingEl = document.getElementById('thb-chart-loading');
-            if (loadingEl) { loadingEl.style.display='flex'; loadingEl.innerText='กำลังโหลดกราฟ...'; }
-            try {
-                const cfg = tf==='1h' ? {days:2,bucketSec:3600} : tf==='1d' ? {days:90,bucketSec:86400} : {days:14,bucketSec:14400};
-                let candles=[];
-                try {
-                    const data = await fetchJsonWithProxy('https://api.coingecko.com/api/v3/coins/pax-gold/market_chart?vs_currency=thb&days='+cfg.days);
-                    if (data && data.prices && data.prices.length) candles = buildCandlesFromPrices(data.prices, cfg.bucketSec);
-                } catch(e){ console.warn('CoinGecko chart failed:', e.message); }
-                if (!candles.length) {
-                    const interval = tf==='1h' ? '1h' : tf==='1d' ? '1d' : '4h';
-                    const limit = tf==='1d' ? 90 : tf==='1h' ? 48 : 84;
-                    const klines = await fetchJsonWithProxy('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval='+interval+'&limit='+limit);
-                    const fx = await fetchJsonWithProxy('https://open.er-api.com/v6/latest/USD');
-                    const usdThb = fx && fx.rates && fx.rates.THB ? Number(fx.rates.THB) : 35;
-                    candles = buildCandlesFromBinanceKlines(klines, usdThb);
-                }
-                if (!candles.length) throw new Error('no candles');
-                const anchor = Number(marketState.sellPrice) || candles[candles.length-1].close;
-                const scale = candles[candles.length-1].close>0 ? anchor/candles[candles.length-1].close : 1;
-                if (isFinite(scale) && scale>0.5 && scale<2) candles = candles.map(function(c){return {time:c.time,open:c.open*scale,high:c.high*scale,low:c.low*scale,close:c.close*scale};});
+            const bucketSec = tf === '1h' ? 3600 : tf === '1d' ? 86400 : 14400;
+            const ticks = loadChartTicks();
+            let candles = buildCandlesFromTicks(ticks, bucketSec);
+            if (!candles.length && isFinite(marketState.sellPrice) && marketState.sellPrice > 0) {
+                const nowSec = Math.floor(Date.now() / 1000 / bucketSec) * bucketSec;
+                const p = Math.round(marketState.sellPrice);
+                candles = [{ time: nowSec, open: p, high: p, low: p, close: p }];
+            }
+            if (candles.length) {
                 thbCandleSeries.setData(candles);
                 if (thbChart) thbChart.timeScale().scrollToRealTime();
-                if (loadingEl) loadingEl.style.display='none';
-            } catch(e){
-                console.warn('Load THB chart failed:', e.message);
-                if (loadingEl){loadingEl.style.display='flex'; loadingEl.innerText='โหลดกราฟไม่ได้ ลองกดเปลี่ยน Timeframe อีกครั้ง';}
-            } finally { thbChartLoading=false; }
+            }
+            const loadingEl = document.getElementById('thb-chart-loading');
+            if (loadingEl) {
+                if (ticks.length < 2) {
+                    loadingEl.style.display = 'flex';
+                    loadingEl.innerText = 'กำลังเก็บราคาจริงจากฮั่วเซ่งเฮง...';
+                } else {
+                    loadingEl.style.display = 'none';
+                }
+            }
+            if (thbCandleSeries && isFinite(marketState.sellPrice) && marketState.sellPrice > 0) {
+                try {
+                    if (thbPriceLine) thbCandleSeries.removePriceLine(thbPriceLine);
+                    thbPriceLine = thbCandleSeries.createPriceLine({
+                        price: Math.round(marketState.sellPrice),
+                        color: '#0c4a7e',
+                        lineWidth: 1,
+                        lineStyle: 2,
+                        axisLabelVisible: true,
+                        title: ''
+                    });
+                } catch (e) { /* price line เป็นของเสริม ถ้าไม่ติดก็ไม่เป็นไร */ }
+            }
         }
+
         function changeTimeframe(tf) {
             try {
-                marketState.timeframe=tf;
-                document.querySelectorAll('.tf-btn').forEach(function(btn){btn.classList.remove('text-[#0c4a7e]','font-bold','bg-blue-50/50');btn.classList.add('text-gray-500','font-medium');});
-                const active=document.getElementById('tf-'+tf);
-                if(active){active.classList.remove('text-gray-500','font-medium');active.classList.add('text-[#0c4a7e]','font-bold','bg-blue-50/50');}
-                loadThbChart(tf);
-            } catch(err){ console.error('Chart timeframe error:', err); }
+                marketState.timeframe = tf;
+                document.querySelectorAll('.tf-btn').forEach(function(btn) {
+                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
+                    btn.classList.add('text-gray-500', 'font-medium');
+                });
+                const active = document.getElementById('tf-' + tf);
+                if (active) {
+                    active.classList.remove('text-gray-500', 'font-medium');
+                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
+                }
+                refreshThbChart(tf);
+            } catch (err) {
+                console.error('Chart timeframe error:', err);
+            }
         }
 
         // ซ่อนหรือแสดงส่วนกราฟ
