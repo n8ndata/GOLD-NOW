@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
-    <!-- โหลด Lightweight Charts สำหรับกราฟแท่งเทียนสไตล์ TradingView -->
+    <!-- โหลด Lightweight Charts สำหรับกราฟแบบ Gold Now -->
     <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     
     <style>
@@ -162,7 +162,7 @@
                     <div class="flex justify-between items-center pt-0.5">
                         <span class="font-normal text-gray-500">กำไร/ขาดทุน</span>
                         <div class="flex items-center gap-1 font-bold text-[#059669]" id="total-pnl-container">
-                            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" style="transform: rotate(0deg);"><path d="M7 14l5-5 5 5z"></path></svg>
+                            <svg id="pnl-trend-icon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 14 21 6"></polyline><polyline points="21 6 21 11 16 6"></polyline></svg>
                             <span id="total-pnl">+143,757.25 ฿</span>
                         </div>
                     </div>
@@ -186,11 +186,12 @@
             </div>
         </div>
 
-        <!-- TradingView Chart Widget Container -->
+        <!-- กราฟแบบระบบ Gold Now (TradingView) - แท่งเทียนเล็กๆ แบบในรูปตัวอย่าง -->
         <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
-            <div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async="">{"autosize":true,"symbol":"TVC:GOLD","interval":"240","timezone":"Asia/Bangkok","theme":"light","style":"1","locale":"th","enable_publishing":false,"hide_top_toolbar":true,"hide_legend":true,"save_image":false,"calendar":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}</script></div>
+            <div id="thb-chart" style="height:100%;width:100%"></div>
+            <div id="thb-chart-loading" class="absolute inset-0 flex items-center justify-center bg-white/80 text-[12px] text-gray-400 pointer-events-none">กำลังโหลดกราฟ...</div>
+            <div class="absolute left-2 bottom-6 pointer-events-none select-none" style="font-family:Arial,sans-serif;font-weight:900;font-size:18px;letter-spacing:-1px;color:#222;">TV</div>
         </div>
-
         <!-- Buy / Sell Action Buttons -->
         <section class="px-4 pt-3 pb-1 bg-white">
             <div class="grid grid-cols-2 gap-3">
@@ -211,7 +212,7 @@
                 </button>
             </div>
 
-            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">20/11/2026 21:49:25</div>
+            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">22/11/2026 03:48:41</div>
         </section>
 
         <!-- Transaction History Section -->
@@ -227,7 +228,7 @@
 
             <!-- Segmented Control Tabs -->
             <div class="grid grid-cols-3 bg-[#f3f4f6] rounded-xl p-1 mb-3 text-[13px] font-medium">
-                <button onclick="filterOrders('ALL')" id="tab-ALL" class="tab-btn py-2 rounded-lg transition bg-[#0c4a7e] text-white shadow-xs">
+                <button onclick="filterOrders('ALL')" id="tab-ALL" class="tab-btn py-2 rounded-lg bg-[#0c4a7e] text-white shadow-xs transition">
                     ทั้งหมด
                 </button>
                 <button onclick="filterOrders('PENDING')" id="tab-PENDING" class="tab-btn py-2 rounded-lg text-gray-600 hover:text-gray-900 transition">
@@ -1001,7 +1002,6 @@
                     <button onclick="clearEmptyPortfolio(); closeSettingsModal();" class="w-full py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition">
                         เริ่มพอร์ตใหม่ (0 กรัม / เงินสด 1,000,000 ฿)
                     </button>
-
                 </div>
             </div>
         </div>
@@ -1195,83 +1195,25 @@
             };
         }
 
-        // ===== เก็บข้อมูลถาวรด้วย localStorage =====
-        // เดิม: ข้อมูลอยู่แค่ในตัวแปร portfolio -> รีเฟรชแล้วหาย
-        // ใหม่: ทุกครั้งที่กด "ยืนยันคำสั่งซื้อ/ขาย" ใน executeTrade() จะเรียก savePortfolio()
-        //      เปิดเว็บใหม่จะโหลดจาก localStorage กลับมา ไม่ต้องกรอกใหม่
         const STORAGE_KEY = 'aom-now-portfolio-v1';
-
         function savePortfolio() {
             try {
-                const payload = {
-                    version: 1,
-                    savedAt: new Date().toISOString(),
-                    cashBalance: portfolio.cashBalance,
-                    totalGrams: portfolio.totalGrams,
-                    totalCost: portfolio.totalCost,
-                    filter: portfolio.filter,
-                    orders: portfolio.orders
-                };
+                const payload = { version: 1, savedAt: new Date().toISOString(), cashBalance: portfolio.cashBalance, totalGrams: portfolio.totalGrams, totalCost: portfolio.totalCost, filter: portfolio.filter, orders: portfolio.orders };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
                 return true;
-            } catch (e) {
-                console.warn('Save portfolio failed:', e);
-                // ถ้า localStorage เต็ม / โดนบล็อก (เช่น private mode) ให้ยังใช้งานต่อแบบ in-memory ได้
-                return false;
-            }
+            } catch (e) { console.warn('Save portfolio failed:', e.message); return false; }
         }
-
         function loadPortfolio() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return null;
                 const data = JSON.parse(raw);
                 if (!data || !Array.isArray(data.orders)) return null;
-                const cash = Number(data.cashBalance);
-                const grams = Number(data.totalGrams);
-                const cost = Number(data.totalCost);
-                if (![cash, grams, cost].every(Number.isFinite)) return null;
-                const orders = data.orders
-                    .filter(o => o && typeof o.id === 'string' && Number.isFinite(Number(o.weight)) && Number.isFinite(Number(o.totalAmount)))
-                    .map(o => {
-                        const clean = {
-                            id: String(o.id),
-                            type: o.type === 'SELL' ? 'SELL' : 'BUY',
-                            weight: Number(o.weight),
-                            status: o.status === 'PENDING' ? 'PENDING' : 'COMPLETED',
-                            goldPrice: Number(o.goldPrice) || 0,
-                            totalAmount: Number(o.totalAmount),
-                            timestamp: String(o.timestamp || '')
-                        };
-                        if (o.realizedPnl != null && Number.isFinite(Number(o.realizedPnl))) clean.realizedPnl = Number(o.realizedPnl);
-                        return clean;
-                    });
-                return {
-                    cashBalance: cash,
-                    totalGrams: grams,
-                    totalCost: cost,
-                    filter: ['ALL', 'PENDING', 'COMPLETED'].includes(data.filter) ? data.filter : 'ALL',
-                    orders: orders,
-                    _savedAt: data.savedAt || null
-                };
-            } catch (e) {
-                console.warn('Load portfolio failed, fallback to initial:', e);
-                return null;
-            }
+                delete data._savedAt;
+                return data;
+            } catch (e) { return null; }
         }
-
-        // โหลดข้อมูลที่เคยบันทึกไว้ก่อน ถ้าไม่มีให้ใช้ค่าเริ่มต้น แล้วบันทึกค่าเริ่มต้นไว้เลย
-        // เพื่อให้รีเฟรชรอบถัดไปไม่กลับไปเป็นค่าเริ่มต้นซ้ำ
-        let portfolio = loadPortfolio();
-        const _hadSavedData = !!portfolio;
-        if (!portfolio) {
-            portfolio = buildInitialPortfolio();
-        } else {
-            delete portfolio._savedAt;
-        }
-        if (!_hadSavedData) {
-            savePortfolio();
-        }
+        let portfolio = loadPortfolio() || buildInitialPortfolio();
         let currentTradeType = 'BUY';
         let inputMode = 'THB';
 
@@ -1296,8 +1238,6 @@
                 fetchRealtimeGoldPrice();
                 setInterval(fetchRealtimeGoldPrice, 30000);
 
-                // ให้แท็บตรงกับ filter ที่เคยบันทึกไว้ (ถ้าเคยเลือก PENDING/COMPLETED ไว้)
-                filterOrders(portfolio.filter || 'ALL');
                 renderAll();
             } catch (err) {
                 console.error('Initialization error:', err);
@@ -1397,55 +1337,130 @@
                 marketState.buyPrice = Math.round(q.buy);
                 marketState.sellPrice = Math.round(q.sell);
                 lastHshUpdate = new Date();
+                pushChartTick(q.buy, q.sell);
                 renderAll();
+                refreshThbChart(marketState.timeframe || '4h');
             } catch (e) {
                 // ดึงไม่ได้ = คงราคาเดิมไว้ ไม่สุ่มราคาเอง
                 console.warn('HSH price fetch failed, keep last price:', e.message);
             }
         }
 
-        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget
+                // กราฟแบบระบบ Gold Now (TradingView) - แท่งเทียนเล็กๆ แบบในรูปตัวอย่าง
+        // แหล่งข้อมูลจริง: API ฮั่วเซ่งเฮง ตัวเดียวกับปุ่มซื้อขาย
+        // https://apicheckpricev3.huasengheng.com/api/values/getprice/
+        // HSH ไม่มี API ประวัติย้อนหลัง จึงไม่แปลงจากแหล่งอื่น
+        // เก็บราคาจริงทุกครั้งที่โพลล์ HSH (ทุก 30 วิ) แล้ววาดเป็นแท่งเทียนแบบ TradingView
+        const CHART_TICKS_KEY = 'gold-now-hsh-chart-ticks-v1';
+        let thbChart = null;
+        let thbCandleSeries = null;
+        let thbPriceLine = null;
+        function formatThbAxis(price) {
+            const v = Math.round(Number(price) || 0);
+            return v.toLocaleString('en-US');
+        }
+        function loadChartTicks() {
+            try {
+                const raw = localStorage.getItem(CHART_TICKS_KEY);
+                if (!raw) return [];
+                const arr = JSON.parse(raw);
+                if (!Array.isArray(arr)) return [];
+                const cutoff = Date.now() - 90 * 24 * 3600 * 1000;
+                return arr.filter(function(x) { return x && isFinite(x.t) && isFinite(x.sell) && x.t >= cutoff; }).sort(function(a, b) { return a.t - b.t; });
+            } catch (e) { return []; }
+        }
+        function saveChartTicks(ticks) {
+            try { localStorage.setItem(CHART_TICKS_KEY, JSON.stringify(ticks.slice(-5000))); } catch (e) {}
+        }
+        function pushChartTick(buy, sell) {
+            if (!isFinite(sell) || sell <= 0) return;
+            const ticks = loadChartTicks();
+            const now = Date.now();
+            const last = ticks[ticks.length - 1];
+            if (last && (now - last.t) < 20000 && last.sell === Math.round(sell)) return;
+            ticks.push({ t: now, buy: Math.round(buy), sell: Math.round(sell) });
+            saveChartTicks(ticks);
+        }
+        function buildCandlesFromTicks(ticks, bucketSec) {
+            const buckets = new Map();
+            for (const tick of ticks) {
+                const bucketStart = Math.floor(tick.t / 1000 / bucketSec) * bucketSec;
+                if (!buckets.has(bucketStart)) buckets.set(bucketStart, []);
+                buckets.get(bucketStart).push(tick.sell);
+            }
+            const candles = [];
+            const keys = Array.from(buckets.keys()).sort(function(a,b){return a-b;});
+            for (const k of keys) {
+                const arr = buckets.get(k);
+                candles.push({ time: k, open: arr[0], high: Math.max.apply(null, arr), low: Math.min.apply(null, arr), close: arr[arr.length-1] });
+            }
+            return candles;
+        }
+        function initThbChart() {
+            if (thbChart) return;
+            const el = document.getElementById('thb-chart');
+            const wrapper = document.getElementById('chart-wrapper');
+            if (!el || !window.LightweightCharts) return;
+            thbChart = LightweightCharts.createChart(el, {
+                width: (wrapper ? wrapper.clientWidth : 360) || 360,
+                height: 190,
+                layout: { background: { color: '#ffffff' }, textColor: '#9ca3af', fontFamily: "'Prompt', sans-serif", fontSize: 11 },
+                grid: { vertLines: { color: '#f3f4f6', visible: true }, horzLines: { color: '#f3f4f6', visible: true } },
+                crosshair: { mode: 1, vertLine: { color: '#d1d5db', labelBackgroundColor: '#6b7280' }, horzLine: { color: '#d1d5db', labelBackgroundColor: '#6b7280' } },
+                rightPriceScale: { borderColor: '#e5e7eb', entireText: true },
+                timeScale: { borderColor: '#e5e7eb', timeVisible: true, secondsVisible: false, rightOffset: 2, barSpacing: 6 }
+            });
+            thbCandleSeries = thbChart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350',
+                wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+                borderVisible: false,
+                priceFormat: { type: 'custom', formatter: formatThbAxis, minMove: 1 }
+            });
+            window.addEventListener('resize', function() {
+                if (!thbChart) return;
+                const w = document.getElementById('chart-wrapper');
+                if (w) thbChart.applyOptions({ width: w.clientWidth || 360 });
+            });
+        }
+        function refreshThbChart(tf) {
+            initThbChart();
+            if (!thbCandleSeries) return;
+            const bucketSec = tf === '1h' ? 300 : tf === '1d' ? 3600 : 900;
+            const windowMs = tf === '1h' ? 24 * 3600 * 1000 : tf === '1d' ? 30 * 24 * 3600 * 1000 : 3 * 24 * 3600 * 1000;
+            const ticks = loadChartTicks().filter(function(x){ return (Date.now() - x.t) <= windowMs; });
+            let candles = buildCandlesFromTicks(ticks, bucketSec);
+            if (!candles.length && isFinite(marketState.sellPrice) && marketState.sellPrice > 0) {
+                const nowSec = Math.floor(Date.now() / 1000 / bucketSec) * bucketSec;
+                const pr = Math.round(marketState.sellPrice);
+                candles = [{ time: nowSec, open: pr, high: pr, low: pr, close: pr }];
+            }
+            if (candles.length) {
+                thbCandleSeries.setData(candles);
+                if (thbChart) thbChart.timeScale().scrollToRealTime();
+                const lastClose = candles[candles.length-1].close;
+                const firstOpen = candles[0].open;
+                const trendColor = lastClose >= firstOpen ? '#26a69a' : '#ef5350';
+                if (isFinite(marketState.sellPrice) && marketState.sellPrice > 0) {
+                    try {
+                        if (thbPriceLine) thbCandleSeries.removePriceLine(thbPriceLine);
+                        thbPriceLine = thbCandleSeries.createPriceLine({ price: Math.round(marketState.sellPrice), color: trendColor, lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: '' });
+                    } catch (e) {}
+                }
+            }
+            const loadingEl = document.getElementById('thb-chart-loading');
+            if (loadingEl) {
+                if (ticks.length < 2) { loadingEl.style.display = 'flex'; loadingEl.innerText = 'กำลังเก็บราคาจริงจากฮั่วเซ่งเฮง...'; }
+                else { loadingEl.style.display = 'none'; }
+            }
+        }
         function changeTimeframe(tf) {
             try {
                 marketState.timeframe = tf;
-                document.querySelectorAll('.tf-btn').forEach(btn => {
-                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                    btn.classList.add('text-gray-500', 'font-medium');
-                });
+                document.querySelectorAll('.tf-btn').forEach(function(btn) { btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50'); btn.classList.add('text-gray-500', 'font-medium'); });
                 const active = document.getElementById('tf-' + tf);
-                if (active) {
-                    active.classList.remove('text-gray-500', 'font-medium');
-                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
-                }
-                const intervalMap = { '1h': '60', '4h': '240', '1d': 'D' };
-                const container = document.querySelector('.tradingview-widget-container');
-                if (container) {
-                    container.innerHTML = `<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>`;
-                    const script = document.createElement('script');
-                    script.type = 'text/javascript';
-                    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-                    script.async = true;
-                    script.text = JSON.stringify({
-                        autosize: true,
-                        symbol: "TVC:GOLD",
-                        interval: intervalMap[tf] || '240',
-                        timezone: "Asia/Bangkok",
-                        theme: "light",
-                        style: "1",
-                        locale: "th",
-                        enable_publishing: false,
-                        hide_top_toolbar: true,
-                        hide_legend: true,
-                        save_image: false,
-                        calendar: false,
-                        hide_volume: true,
-                        support_host: "https://www.tradingview.com"
-                    });
-                    container.appendChild(script);
-                }
-            } catch (err) {
-                console.error('Chart timeframe error:', err);
-            }
+                if (active) { active.classList.remove('text-gray-500', 'font-medium'); active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50'); }
+                refreshThbChart(tf);
+            } catch (err) { console.error('Chart timeframe error:', err); }
         }
 
         // ซ่อนหรือแสดงส่วนกราฟ
@@ -1470,12 +1485,13 @@
             const pnlEl = document.getElementById('total-pnl');
             pnlEl.innerText = formatPnlTwoDecimals(pnl);
 
+                        const trendIcon = document.getElementById('pnl-trend-icon');
             if (pnl >= 0) {
                 pnlContainer.className = 'flex items-center gap-1 font-bold text-[#059669]';
-                pnlContainer.querySelector('svg').style.transform = 'rotate(0deg)';
+                if (trendIcon) trendIcon.innerHTML = '<polyline points="3 17 9 11 13 14 21 6"></polyline><polyline points="21 6 21 11 16 6"></polyline>';
             } else {
                 pnlContainer.className = 'flex items-center gap-1 font-bold text-[#e63946]';
-                pnlContainer.querySelector('svg').style.transform = 'rotate(180deg)';
+                if (trendIcon) trendIcon.innerHTML = '<polyline points="3 7 9 13 13 10 21 18"></polyline><polyline points="21 18 21 13 16 18"></polyline>';
             }
         }
 
@@ -1564,7 +1580,6 @@
         // กรองแท็บรายการคำสั่งซื้อขาย
         function filterOrders(tab) {
             portfolio.filter = tab;
-            savePortfolio();
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('bg-[#0c4a7e]', 'text-white', 'shadow-xs');
                 btn.classList.add('text-gray-600');
@@ -1797,8 +1812,8 @@
         // รีเซ็ตพอร์ตกลับเป็นรายการเริ่มต้น
         function resetToOriginalMock() {
             portfolio = buildInitialPortfolio();
-            filterOrders('ALL');
             savePortfolio();
+            filterOrders('ALL');
             renderAll();
             showToast('รีเซ็ตพอร์ตกลับเป็นค่าเริ่มต้นเรียบร้อย');
         }
@@ -1813,7 +1828,6 @@
                 orders: []
             };
             filterOrders('ALL');
-            savePortfolio();
             renderAll();
             showToast('เริ่มพอร์ตใหม่ เงินสด 1,000,000 ฿');
         }
