@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
-    <!-- โหลด Lightweight Charts สำหรับกราฟแบบ Gold Now -->
+    <!-- โหลด Lightweight Charts สำหรับกราฟแท่งเทียนสไตล์ TradingView -->
     <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     
     <style>
@@ -186,7 +186,7 @@
             </div>
         </div>
 
-        <!-- กราฟแบบระบบ Gold Now (TradingView) - แท่งเทียนเล็กๆ แบบในรูปตัวอย่าง -->
+        <!-- กราฟแบบ Gold Now - อ้างอิงราคาฮั่วเซ่งเฮงอย่างเดียว -->
         <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
             <div id="thb-chart" style="height:100%;width:100%"></div>
             <div id="thb-chart-loading" class="absolute inset-0 flex items-center justify-center bg-white/80 text-[12px] text-gray-400 pointer-events-none">กำลังโหลดกราฟ...</div>
@@ -212,7 +212,7 @@
                 </button>
             </div>
 
-            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">22/11/2026 03:48:41</div>
+            <div class="text-center mt-2 text-[11px] text-gray-400 font-medium tracking-wide" id="live-timestamp">22/11/2026 06:31:05</div>
         </section>
 
         <!-- Transaction History Section -->
@@ -1234,9 +1234,9 @@
                 updateClock();
                 setInterval(updateClock, 1000);
                 
-                // ดึงราคาฮั่วเซ่งเฮง (HSH965) ทุก 30 วินาที
+                // ดึงราคาฮั่วเซ่งเฮง (HSH965) ทุก 10 วินาที
                 fetchRealtimeGoldPrice();
-                setInterval(fetchRealtimeGoldPrice, 30000);
+                setInterval(fetchRealtimeGoldPrice, 10000);
 
                 renderAll();
             } catch (err) {
@@ -1346,11 +1346,11 @@
             }
         }
 
-                // กราฟแบบระบบ Gold Now (TradingView) - แท่งเทียนเล็กๆ แบบในรูปตัวอย่าง
-        // แหล่งข้อมูลจริง: API ฮั่วเซ่งเฮง ตัวเดียวกับปุ่มซื้อขาย
+                // กราฟแบบ Gold Now - UX/UI เหมือนในรูปตัวอย่าง
+        // แหล่งข้อมูลเดียว: API ฮั่วเซ่งเฮง ตัวเดียวกับปุ่มซื้อขาย
         // https://apicheckpricev3.huasengheng.com/api/values/getprice/
-        // HSH ไม่มี API ประวัติย้อนหลัง จึงไม่แปลงจากแหล่งอื่น
-        // เก็บราคาจริงทุกครั้งที่โพลล์ HSH (ทุก 30 วิ) แล้ววาดเป็นแท่งเทียนแบบ TradingView
+        // ไม่แปลงจากแหล่งอื่น ไม่ใช้ราคาดอลลาร์
+        // เก็บราคาจริงทุกครั้งที่โพลล์ฮั่วเซ่งเฮง แล้ววาดเป็นแท่งเทียนแบบ Gold Now
         const CHART_TICKS_KEY = 'gold-now-hsh-chart-ticks-v1';
         let thbChart = null;
         let thbCandleSeries = null;
@@ -1370,14 +1370,15 @@
             } catch (e) { return []; }
         }
         function saveChartTicks(ticks) {
-            try { localStorage.setItem(CHART_TICKS_KEY, JSON.stringify(ticks.slice(-5000))); } catch (e) {}
+            try { localStorage.setItem(CHART_TICKS_KEY, JSON.stringify(ticks.slice(-10000))); } catch (e) {}
         }
         function pushChartTick(buy, sell) {
             if (!isFinite(sell) || sell <= 0) return;
             const ticks = loadChartTicks();
             const now = Date.now();
             const last = ticks[ticks.length - 1];
-            if (last && (now - last.t) < 20000 && last.sell === Math.round(sell)) return;
+            // เก็บทุกครั้งที่ราคาเปลี่ยน ถึงจะเปลี่ยนนิดเดียวก็เก็บ จะได้เห็นขึ้นลง
+            if (last && (now - last.t) < 5000 && last.sell === Math.round(sell)) return;
             ticks.push({ t: now, buy: Math.round(buy), sell: Math.round(sell) });
             saveChartTicks(ticks);
         }
@@ -1392,7 +1393,11 @@
             const keys = Array.from(buckets.keys()).sort(function(a,b){return a-b;});
             for (const k of keys) {
                 const arr = buckets.get(k);
-                candles.push({ time: k, open: arr[0], high: Math.max.apply(null, arr), low: Math.min.apply(null, arr), close: arr[arr.length-1] });
+                // ถ้าแท่งแบนเพราะราคาไม่ขยับเลยใน bucket นั้น ให้เห็นไส้เทียนนิดเดียว
+                // จะได้ไม่ดูเป็นเส้นแบนๆ
+                let o = arr[0], h = Math.max.apply(null, arr), l = Math.min.apply(null, arr), c = arr[arr.length-1];
+                if (h === l) { h = h + 1; l = Math.max(1, l - 1); }
+                candles.push({ time: k, open: o, high: h, low: l, close: c });
             }
             return candles;
         }
@@ -1425,14 +1430,17 @@
         function refreshThbChart(tf) {
             initThbChart();
             if (!thbCandleSeries) return;
-            const bucketSec = tf === '1h' ? 300 : tf === '1d' ? 3600 : 900;
+            // แบบ Gold Now: แท่งถี่ๆ จะได้เห็นขึ้นลงชัด
+            // 1h = แท่งละ 1 นาที, 4h = แท่งละ 1 นาที, 1D = แท่งละ 5 นาที
+            // ยิ่ง bucket เล็ก ยิ่งเห็นการขยับเล็กๆ ของราคาฮั่วเซ่งเฮง
+            const bucketSec = tf === '1d' ? 300 : 60;
             const windowMs = tf === '1h' ? 24 * 3600 * 1000 : tf === '1d' ? 30 * 24 * 3600 * 1000 : 3 * 24 * 3600 * 1000;
             const ticks = loadChartTicks().filter(function(x){ return (Date.now() - x.t) <= windowMs; });
             let candles = buildCandlesFromTicks(ticks, bucketSec);
             if (!candles.length && isFinite(marketState.sellPrice) && marketState.sellPrice > 0) {
                 const nowSec = Math.floor(Date.now() / 1000 / bucketSec) * bucketSec;
                 const pr = Math.round(marketState.sellPrice);
-                candles = [{ time: nowSec, open: pr, high: pr, low: pr, close: pr }];
+                candles = [{ time: nowSec, open: pr, high: pr + 1, low: pr - 1, close: pr }];
             }
             if (candles.length) {
                 thbCandleSeries.setData(candles);
