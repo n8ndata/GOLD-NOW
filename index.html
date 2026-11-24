@@ -170,13 +170,13 @@
             </div>
         </section>
 
-        <!-- Chart Toolbar -->
-        <div class="border-t border-b border-gray-100 flex items-center bg-white px-3 text-sm">
-            <div class="py-2 font-bold text-[#222222] border-r border-gray-100 pr-3">
+        <!-- Chart Toolbar (โทนเดียวกับแถบเครื่องมือกราฟ TradingView ในแอป GOLD NOW) -->
+        <div class="border-y border-blue-100 flex items-center bg-[#eff6ff] px-3 text-sm shrink-0">
+            <div class="py-2 font-bold text-[#1e3a5f] border-r border-blue-200 pr-3">
                 HSH965
             </div>
             <button onclick="changeTimeframe('1h')" id="tf-1h" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1h</button>
-            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 transition text-[#0c4a7e] font-bold bg-blue-50/50">4h</button>
+            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 transition text-[#0c4a7e] font-bold bg-white/70 rounded-md">4h</button>
             <button onclick="changeTimeframe('1d')" id="tf-1d" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1D</button>
             
             <div class="ml-auto flex items-center gap-2">
@@ -187,7 +187,7 @@
         </div>
 
         <!-- กราฟราคาทองคำ HSH965 แสดงเป็นสกุลบาทไทย (บาท/บาททอง) -->
-        <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
+        <div id="chart-wrapper" class="relative w-full h-[190px] shrink-0 bg-white border-b border-gray-100 transition-all overflow-hidden">
             <div id="gold-chart" class="absolute inset-0"></div>
             <div id="chart-loading" class="absolute inset-0 flex items-center justify-center text-[11px] text-gray-400 pointer-events-none">กำลังโหลดกราฟราคาทองคำ...</div>
             <div id="chart-demo-note" class="hidden absolute bottom-1 left-2 text-[9px] text-gray-400 pointer-events-none">แสดงข้อมูลตัวอย่าง</div>
@@ -1439,18 +1439,18 @@
                 height: 190,
                 layout: {
                     background: { type: LightweightCharts.ColorType.Solid, color: '#ffffff' },
-                    textColor: '#9ca3af',
+                    textColor: '#6a6d78',
                     fontFamily: 'Prompt, sans-serif',
-                    fontSize: 10
+                    fontSize: 11
                 },
                 grid: {
-                    vertLines: { color: '#f4f5f7' },
-                    horzLines: { color: '#f4f5f7' }
+                    vertLines: { color: '#f0f1f3' },
+                    horzLines: { color: '#eceef1' }
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
-                    vertLine: { color: '#c7cdd6', width: 1, style: 2, labelBackgroundColor: '#6b7280' },
-                    horzLine: { color: '#c7cdd6', width: 1, style: 2, labelBackgroundColor: '#6b7280' }
+                    vertLine: { color: '#9598a1', width: 1, style: 2, labelBackgroundColor: '#6a6d78' },
+                    horzLine: { color: '#9598a1', width: 1, style: 2, labelBackgroundColor: '#6a6d78' }
                 },
                 rightPriceScale: {
                     borderVisible: false,
@@ -1582,7 +1582,8 @@
 
             const step = tf === '1d' ? 86400 : tf === '4h' ? 14400 : 3600;
             const merged = aggregateCandles(candles, step);
-            const limit = tf === '1d' ? 90 : 120;
+            // จำนวนแท่งที่แสดงใกล้เคียงกราฟTimesของ TradingView บนมือถือ
+            const limit = tf === '1d' ? 60 : 50;
             goldHistoryCache[tf] = merged.slice(-limit);
             return goldHistoryCache[tf];
         }
@@ -1620,7 +1621,14 @@
                 low: Math.round(c.low * goldChartScale),
                 close: Math.round(c.close * goldChartScale)
             })));
-            if (fit) goldChart.timeScale().fitContent();
+            if (fit) {
+                // ให้แท่งเทียนมีระยะห่างคงที่แบบ TradingView (ไม่บีบให้เต็มจอ)
+                goldChart.timeScale().scrollToRealTime();
+                goldChart.timeScale().setVisibleLogicalRange({
+                    from: goldBaseCandles.length - 46,
+                    to: goldBaseCandles.length + 2
+                });
+            }
             const loading = document.getElementById('chart-loading');
             if (loading) loading.classList.add('hidden');
         }
@@ -1658,13 +1666,13 @@
             try {
                 marketState.timeframe = tf;
                 document.querySelectorAll('.tf-btn').forEach(btn => {
-                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
+                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-white/70', 'rounded-md');
                     btn.classList.add('text-gray-500', 'font-medium');
                 });
                 const active = document.getElementById('tf-' + tf);
                 if (active) {
                     active.classList.remove('text-gray-500', 'font-medium');
-                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
+                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-white/70', 'rounded-md');
                 }
                 loadGoldChart(tf);
             } catch (err) {
