@@ -153,30 +153,30 @@
                 <div class="space-y-2 pt-2.5 border-t border-gray-200/60 text-[13.5px]">
                     <div class="flex justify-between items-center text-gray-500">
                         <span class="font-normal">ต้นทุนรวม</span>
-                        <span id="total-cost" class="font-semibold text-[#333333]">฿ 945,000.00</span>
+                        <span id="total-cost" class="font-semibold text-[#333333]">945,000.00 ฿</span>
                     </div>
                     <div class="flex justify-between items-center text-gray-500">
                         <span class="font-normal">มูลค่าปัจจุบัน</span>
-                        <span id="current-value" class="font-semibold text-[#333333]">฿ 1,088,757.25</span>
+                        <span id="current-value" class="font-semibold text-[#333333]">1,088,757.25 ฿</span>
                     </div>
                     <div class="flex justify-between items-center pt-0.5">
                         <span class="font-normal text-gray-500">กำไร/ขาดทุน</span>
                         <div class="flex items-center gap-1 font-bold text-[#059669]" id="total-pnl-container">
                             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" style="transform: rotate(0deg);"><path d="M7 14l5-5 5 5z"></path></svg>
-                            <span id="total-pnl">+฿ 143,757.25</span>
+                            <span id="total-pnl">+143,757.25 ฿</span>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Chart Toolbar (โทนเดียวกับแถบเครื่องมือกราฟ TradingView ในแอป GOLD NOW) -->
-        <div class="border-y border-blue-100 flex items-center bg-[#eff6ff] px-3 text-sm shrink-0">
-            <div class="py-2 font-bold text-[#1e3a5f] border-r border-blue-200 pr-3">
+        <!-- Chart Toolbar -->
+        <div class="border-t border-b border-gray-100 flex items-center bg-white px-3 text-sm">
+            <div class="py-2 font-bold text-[#222222] border-r border-gray-100 pr-3">
                 HSH965
             </div>
             <button onclick="changeTimeframe('1h')" id="tf-1h" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1h</button>
-            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 transition text-[#0c4a7e] font-bold bg-white/70 rounded-md">4h</button>
+            <button onclick="changeTimeframe('4h')" id="tf-4h" class="tf-btn px-2.5 py-2 transition text-[#0c4a7e] font-bold bg-blue-50/50">4h</button>
             <button onclick="changeTimeframe('1d')" id="tf-1d" class="tf-btn px-2.5 py-2 text-gray-500 font-medium transition">1D</button>
             
             <div class="ml-auto flex items-center gap-2">
@@ -186,11 +186,9 @@
             </div>
         </div>
 
-        <!-- กราฟราคาทองคำ HSH965 แสดงเป็นสกุลบาทไทย (บาท/บาททอง) -->
-        <div id="chart-wrapper" class="relative w-full h-[190px] shrink-0 bg-white border-b border-gray-100 transition-all overflow-hidden">
-            <div id="gold-chart" class="absolute inset-0"></div>
-            <div id="chart-loading" class="absolute inset-0 flex items-center justify-center text-[11px] text-gray-400 pointer-events-none">กำลังโหลดกราฟราคาทองคำ...</div>
-            <div id="chart-demo-note" class="hidden absolute bottom-1 left-2 text-[9px] text-gray-400 pointer-events-none">แสดงข้อมูลตัวอย่าง</div>
+        <!-- TradingView Chart Widget Container -->
+        <div id="chart-wrapper" class="relative w-full h-[190px] bg-white border-b border-gray-100 transition-all overflow-hidden">
+            <div class="tradingview-widget-container" style="height:100%;width:100%"><div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div><script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async="">{"autosize":true,"symbol":"TVC:GOLD","interval":"240","timezone":"Asia/Bangkok","theme":"light","style":"1","locale":"th","enable_publishing":false,"hide_top_toolbar":true,"hide_legend":true,"save_image":false,"calendar":false,"hide_volume":true,"support_host":"https://www.tradingview.com"}</script></div>
         </div>
 
         <!-- Buy / Sell Action Buttons -->
@@ -267,15 +265,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 60,610</span>
+                                    <span class="font-bold text-[#333333]">60,610 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 30,000.00</span>
+                                    <span class="font-bold text-[#333333]">30,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 494.93</span>
+                                    <span class="font-bold text-[#e63946]">-494.93 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -307,15 +305,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 60,450</span>
+                                    <span class="font-bold text-[#333333]">60,450 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 30,000.00</span>
+                                    <span class="font-bold text-[#333333]">30,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 416.72</span>
+                                    <span class="font-bold text-[#e63946]">-416.72 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -347,15 +345,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 61,800</span>
+                                    <span class="font-bold text-[#333333]">61,800 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 5,000.00</span>
+                                    <span class="font-bold text-[#333333]">5,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 177.31</span>
+                                    <span class="font-bold text-[#e63946]">-177.31 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -387,15 +385,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 62,400</span>
+                                    <span class="font-bold text-[#333333]">62,400 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 5,000.00</span>
+                                    <span class="font-bold text-[#333333]">5,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 223.46</span>
+                                    <span class="font-bold text-[#e63946]">-223.46 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -427,15 +425,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 63,150</span>
+                                    <span class="font-bold text-[#333333]">63,150 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 5,000.00</span>
+                                    <span class="font-bold text-[#333333]">5,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 280.16</span>
+                                    <span class="font-bold text-[#e63946]">-280.16 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -467,15 +465,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 63,900</span>
+                                    <span class="font-bold text-[#333333]">63,900 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 5,000.00</span>
+                                    <span class="font-bold text-[#333333]">5,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 335.69</span>
+                                    <span class="font-bold text-[#e63946]">-335.69 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -507,15 +505,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 64,500</span>
+                                    <span class="font-bold text-[#333333]">64,500 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 5,000.00</span>
+                                    <span class="font-bold text-[#333333]">5,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 379.09</span>
+                                    <span class="font-bold text-[#e63946]">-379.09 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -547,15 +545,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 65,240</span>
+                                    <span class="font-bold text-[#333333]">65,240 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 10,000.00</span>
+                                    <span class="font-bold text-[#333333]">10,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#e63946]">-฿ 862.98</span>
+                                    <span class="font-bold text-[#e63946]">-862.98 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -587,15 +585,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 57,100</span>
+                                    <span class="font-bold text-[#333333]">57,100 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 4,395.71</span>
+                                    <span class="font-bold text-[#059669]">+4,395.71 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -627,15 +625,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 52,800</span>
+                                    <span class="font-bold text-[#333333]">52,800 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 12,897.68</span>
+                                    <span class="font-bold text-[#059669]">+12,897.68 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -667,15 +665,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 52,250</span>
+                                    <span class="font-bold text-[#333333]">52,250 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 14,086.05</span>
+                                    <span class="font-bold text-[#059669]">+14,086.05 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -707,15 +705,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 51,100</span>
+                                    <span class="font-bold text-[#333333]">51,100 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 16,653.61</span>
+                                    <span class="font-bold text-[#059669]">+16,653.61 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -747,15 +745,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 51,450</span>
+                                    <span class="font-bold text-[#333333]">51,450 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 15,860.19</span>
+                                    <span class="font-bold text-[#059669]">+15,860.19 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -787,15 +785,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 50,950</span>
+                                    <span class="font-bold text-[#333333]">50,950 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 16,996.94</span>
+                                    <span class="font-bold text-[#059669]">+16,996.94 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -827,15 +825,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 48,200</span>
+                                    <span class="font-bold text-[#333333]">48,200 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 23,672.37</span>
+                                    <span class="font-bold text-[#059669]">+23,672.37 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -867,15 +865,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 46,850</span>
+                                    <span class="font-bold text-[#333333]">46,850 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 50,000.00</span>
+                                    <span class="font-bold text-[#333333]">50,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 13,617.76</span>
+                                    <span class="font-bold text-[#059669]">+13,617.76 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -907,15 +905,15 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">฿ 46,300</span>
+                                    <span class="font-bold text-[#333333]">46,300 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">฿ 100,000.00</span>
+                                    <span class="font-bold text-[#333333]">100,000.00 ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
-                                    <span class="font-bold text-[#059669]">+฿ 28,747.28</span>
+                                    <span class="font-bold text-[#059669]">+28,747.28 ฿</span>
                                 </div>
                             </div>
                         </div>
@@ -943,11 +941,11 @@
             <div class="my-4 bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
                 <div>
                     <p class="text-xs text-gray-500">ราคาทำรายการปัจจุบัน (บาท/บาททอง)</p>
-                    <p id="modal-price" class="text-2xl font-bold text-[#0c4a7e]">฿ 59,690</p>
+                    <p id="modal-price" class="text-2xl font-bold text-[#0c4a7e]">59,690 ฿</p>
                 </div>
                 <div class="text-right">
                     <p class="text-xs text-gray-500" id="modal-avail-label">เงินสดคงเหลือ</p>
-                    <p id="modal-avail-value" class="text-sm font-bold text-gray-700">฿ 500,000.00</p>
+                    <p id="modal-avail-value" class="text-sm font-bold text-gray-700">500,000.00 ฿</p>
                 </div>
             </div>
 
@@ -1001,7 +999,7 @@
                         รีเซ็ตพอร์ตกลับเป็นค่าเงินบาทเริ่มต้น
                     </button>
                     <button onclick="clearEmptyPortfolio(); closeSettingsModal();" class="w-full py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition">
-                        เริ่มพอร์ตใหม่ (0 กรัม / เงินสด ฿ 1,000,000)
+                        เริ่มพอร์ตใหม่ (0 กรัม / เงินสด 1,000,000 ฿)
                     </button>
 
                 </div>
@@ -1277,20 +1275,14 @@
         let currentTradeType = 'BUY';
         let inputMode = 'THB';
 
-        // รูปแบบเงินสกุลบาทไทยตามแอป GOLD NOW: ฿ 72,020 (สัญลักษณ์นำหน้า มีช่องไฟ 1 ช่อง)
-        function formatTHB(amount, decimals = 0) {
-            const value = Number(amount) || 0;
-            return '฿ ' + value.toLocaleString('en-US', {
-                minimumFractionDigits: decimals,
-                maximumFractionDigits: decimals
-            });
-        }
-
         // ฟังก์ชันช่วยจัดรูปแบบตัวเลขกำไร/ขาดทุนให้เป็นทศนิยม 2 ตำแหน่งเสมอ
         function formatPnlTwoDecimals(amount) {
             const numericAmount = Number(amount) || 0;
-            const sign = numericAmount > 0 ? '+' : numericAmount < 0 ? '-' : '';
-            return sign + formatTHB(Math.abs(numericAmount), 2);
+            const sign = numericAmount >= 0 ? '+' : '';
+            return sign + numericAmount.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' ฿';
         }
 
         // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
@@ -1406,275 +1398,51 @@
                 marketState.sellPrice = Math.round(q.sell);
                 lastHshUpdate = new Date();
                 renderAll();
-                // ปรับระดับราคากราฟให้ตรงกับราคาฮั่วเซ่งเฮงล่าสุดเสมอ
-                renderGoldChartData(false);
             } catch (e) {
                 // ดึงไม่ได้ = คงราคาเดิมไว้ ไม่สุ่มราคาเอง
                 console.warn('HSH price fetch failed, keep last price:', e.message);
             }
         }
 
-        // ===== กราฟราคาทองคำ HSH965 ในสกุลบาทไทย =====
-        // ใช้ข้อมูลราคาทองคำ Spot (USD/oz) แปลงเป็นบาทต่อบาททอง แล้วปรับเทียบให้แท่งล่าสุด
-        // ตรงกับราคาขายออกของฮั่วเซ่งเฮง (HSH965) ที่ได้จาก API จริง
-        const YAHOO_GOLD_API = 'https://query1.finance.yahoo.com/v8/finance/chart/GC=F';
-        const USDTHB_API = 'https://open.er-api.com/v6/latest/USD';
-        const OZ_TO_BAHT_WEIGHT = BAHT_TO_GRAM / 31.1034768;
-
-        let goldChart = null;
-        let goldSeries = null;
-        let goldBaseCandles = [];
-        let goldChartScale = 1;
-        let goldChartRequestId = 0;
-        let goldChartReady = false;
-        const goldHistoryCache = {};
-
-        function initGoldChart() {
-            const el = document.getElementById('gold-chart');
-            if (!el || typeof LightweightCharts === 'undefined') return false;
-
-            el.innerHTML = '';
-            goldChart = LightweightCharts.createChart(el, {
-                width: el.clientWidth || 380,
-                height: 190,
-                layout: {
-                    background: { type: LightweightCharts.ColorType.Solid, color: '#ffffff' },
-                    textColor: '#6a6d78',
-                    fontFamily: 'Prompt, sans-serif',
-                    fontSize: 11
-                },
-                grid: {
-                    vertLines: { color: '#f0f1f3' },
-                    horzLines: { color: '#eceef1' }
-                },
-                crosshair: {
-                    mode: LightweightCharts.CrosshairMode.Normal,
-                    vertLine: { color: '#9598a1', width: 1, style: 2, labelBackgroundColor: '#6a6d78' },
-                    horzLine: { color: '#9598a1', width: 1, style: 2, labelBackgroundColor: '#6a6d78' }
-                },
-                rightPriceScale: {
-                    borderVisible: false,
-                    scaleMargins: { top: 0.12, bottom: 0.12 }
-                },
-                timeScale: {
-                    borderVisible: false,
-                    rightOffset: 3,
-                    barSpacing: 6,
-                    minBarSpacing: 2,
-                    timeVisible: marketState.timeframe !== '1d',
-                    secondsVisible: false
-                },
-                handleScale: { axisPressedMouseMove: false },
-                handleScroll: { mouseWheel: true, pressedMouseMove: true }
-            });
-
-            goldSeries = goldChart.addCandlestickSeries({
-                upColor: '#089981',
-                downColor: '#f23645',
-                borderVisible: false,
-                wickUpColor: '#089981',
-                wickDownColor: '#f23645',
-                priceFormat: {
-                    type: 'price',
-                    precision: 0,
-                    minMove: 1,
-                    formatter: price => Math.round(price).toString()
-                },
-                lastValueVisible: true,
-                priceLineVisible: true,
-                priceLineColor: '#089981',
-                priceLineWidth: 1,
-                priceLineStyle: 0
-            });
-
-            if (typeof ResizeObserver !== 'undefined') {
-                new ResizeObserver(() => {
-                    if (goldChart && el.clientWidth) goldChart.applyOptions({ width: el.clientWidth });
-                }).observe(el);
-            }
-            goldChartReady = true;
-            return true;
-        }
-
-        // รวมแท่ง 60 นาทีเป็นแท่ง 4 ชั่วโมง (ตามเวลาประเทศไทย UTC+7)
-        function aggregateCandles(candles, stepSeconds) {
-            if (stepSeconds <= 3600) return candles;
-            const buckets = new Map();
-            candles.forEach(c => {
-                const bucket = Math.floor(c.time / stepSeconds) * stepSeconds;
-                const cur = buckets.get(bucket);
-                if (!cur) {
-                    buckets.set(bucket, { ...c, time: bucket });
-                } else {
-                    cur.high = Math.max(cur.high, c.high);
-                    cur.low = Math.min(cur.low, c.low);
-                    cur.close = c.close;
-                }
-            });
-            return Array.from(buckets.values()).sort((a, b) => a.time - b.time);
-        }
-
-        // Yahoo / FX ไม่ส่ง CORS header จึงใช้ proxy เป็นทางแรกเพื่อไม่ให้เกิด error ใน console
-        async function fetchViaProxy(url) {
-            const encoded = encodeURIComponent(url);
-            const proxies = [
-                { url: 'https://api.allorigins.win/get?url=' + encoded, wrapped: true },
-                { url: 'https://api.allorigins.win/raw?url=' + encoded, wrapped: false },
-                { url: 'https://corsproxy.io/?url=' + encoded, wrapped: false }
-            ];
-            let lastErr = null;
-            for (const p of proxies) {
-                try {
-                    const r = await fetch(p.url, { cache: 'no-store' });
-                    if (!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
-                    const json = await r.json();
-                    if (p.wrapped && json && typeof json.contents === 'string') return JSON.parse(json.contents);
-                    return json;
-                } catch (e) { lastErr = e; }
-            }
-            throw lastErr || new Error('Proxy unreachable');
-        }
-
-        // อัตรา USD/THB รองรับ CORS โดยตรง จึงยิงตรงก่อน แล้วค่อยผ่าน proxy หากโดนบล็อก
-        async function fetchFxJson() {
-            try {
-                const r = await fetch(USDTHB_API, { cache: 'no-store' });
-                if (r.ok) return await r.json();
-            } catch (e) { /* ไปลอง proxy */ }
-            return fetchViaProxy(USDTHB_API);
-        }
-
-        async function fetchGoldHistory(tf) {
-            if (Array.isArray(goldHistoryCache[tf]) && goldHistoryCache[tf].length) return goldHistoryCache[tf];
-            const params = tf === '1d'
-                ? '?range=6mo&interval=1d'
-                : '?range=' + (tf === '1h' ? '5d' : '1mo') + '&interval=60m';
-            const [goldJson, fxJson] = await Promise.all([
-                fetchViaProxy(YAHOO_GOLD_API + params),
-                fetchFxJson()
-            ]);
-
-            const usdThb = Number(fxJson && fxJson.rates && fxJson.rates.THB);
-            if (!Number.isFinite(usdThb) || usdThb <= 0) throw new Error('USD/THB rate unavailable');
-
-            const result = goldJson && goldJson.chart && goldJson.chart.result && goldJson.chart.result[0];
-            const timestamps = (result && result.timestamp) || [];
-            const quote = (result && result.indicators && result.indicators.quote && result.indicators.quote[0]) || {};
-            const factor = usdThb * OZ_TO_BAHT_WEIGHT;
-
-            const candles = [];
-            for (let i = 0; i < timestamps.length; i++) {
-                const o = Number(quote.open && quote.open[i]);
-                const h = Number(quote.high && quote.high[i]);
-                const l = Number(quote.low && quote.low[i]);
-                const c = Number(quote.close && quote.close[i]);
-                if (![o, h, l, c].every(Number.isFinite) || c <= 0) continue;
-                // +7 ชั่วโมงเพื่อให้แกนเวลาแสดงตามเวลาประเทศไทย
-                candles.push({
-                    time: Number(timestamps[i]) + 7 * 3600,
-                    open: o * factor,
-                    high: h * factor,
-                    low: l * factor,
-                    close: c * factor
-                });
-            }
-            if (!candles.length) throw new Error('No gold history');
-
-            const step = tf === '1d' ? 86400 : tf === '4h' ? 14400 : 3600;
-            const merged = aggregateCandles(candles, step);
-            // จำนวนแท่งที่แสดงใกล้เคียงกราฟTimesของ TradingView บนมือถือ
-            const limit = tf === '1d' ? 60 : 50;
-            goldHistoryCache[tf] = merged.slice(-limit);
-            return goldHistoryCache[tf];
-        }
-
-        // ข้อมูลตัวอย่างเมื่อไม่สามารถเชื่อมต่อแหล่งข้อมูลได้ (ยังอ้างอิงราคาจริง HSH965)
-        function buildFallbackCandles(tf) {
-            const step = tf === '1d' ? 86400 : tf === '4h' ? 14400 : 3600;
-            const count = tf === '1d' ? 90 : 120;
-            const lastBucket = Math.floor((Date.now() / 1000 + 7 * 3600) / step) * step;
-            let seed = 20261125;
-            const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-            let price = marketState.sellPrice * 0.94;
-            const candles = [];
-            for (let i = count - 1; i >= 0; i--) {
-                const drift = (marketState.sellPrice - price) / (i + 2);
-                const open = price;
-                const close = Math.max(1000, open + drift + (rnd() - 0.5) * open * 0.006);
-                const high = Math.max(open, close) + rnd() * open * 0.0025;
-                const low = Math.min(open, close) - rnd() * open * 0.0025;
-                candles.push({ time: lastBucket - i * step, open, high, low, close });
-                price = close;
-            }
-            candles[candles.length - 1].close = marketState.sellPrice;
-            return candles;
-        }
-
-        function renderGoldChartData(fit = true) {
-            if (!goldChartReady || !goldSeries || !goldBaseCandles.length) return;
-            const lastBase = goldBaseCandles[goldBaseCandles.length - 1];
-            goldChartScale = lastBase.close > 0 ? marketState.sellPrice / lastBase.close : 1;
-            goldSeries.setData(goldBaseCandles.map(c => ({
-                time: c.time,
-                open: Math.round(c.open * goldChartScale),
-                high: Math.round(c.high * goldChartScale),
-                low: Math.round(c.low * goldChartScale),
-                close: Math.round(c.close * goldChartScale)
-            })));
-            if (fit) {
-                // ให้แท่งเทียนมีระยะห่างคงที่แบบ TradingView (ไม่บีบให้เต็มจอ)
-                goldChart.timeScale().scrollToRealTime();
-                goldChart.timeScale().setVisibleLogicalRange({
-                    from: goldBaseCandles.length - 46,
-                    to: goldBaseCandles.length + 2
-                });
-            }
-            const loading = document.getElementById('chart-loading');
-            if (loading) loading.classList.add('hidden');
-        }
-
-        async function loadGoldChart(tf) {
-            const requestId = ++goldChartRequestId;
-            if (!goldChartReady && !initGoldChart()) return;
-            goldChart.applyOptions({ timeScale: { timeVisible: tf !== '1d' } });
-
-            const loading = document.getElementById('chart-loading');
-            const demoNote = document.getElementById('chart-demo-note');
-            if (loading) {
-                loading.innerText = 'กำลังโหลดกราฟราคาทองคำ...';
-                loading.classList.remove('hidden');
-            }
-            if (demoNote) demoNote.classList.add('hidden');
-
-            let isDemo = false;
-            try {
-                goldBaseCandles = await fetchGoldHistory(tf);
-            } catch (err) {
-                console.warn('Gold chart history fallback:', err.message);
-                if (requestId !== goldChartRequestId) return;
-                goldBaseCandles = buildFallbackCandles(tf);
-                isDemo = true;
-            }
-            if (requestId !== goldChartRequestId) return;
-
-            renderGoldChartData(true);
-            if (isDemo && demoNote) demoNote.classList.remove('hidden');
-        }
-
-        // เปลี่ยนช่วงเวลากราฟ (Timeframe)
+        // เปลี่ยนช่วงเวลากราฟ (Timeframe) บน TradingView Widget
         function changeTimeframe(tf) {
             try {
                 marketState.timeframe = tf;
                 document.querySelectorAll('.tf-btn').forEach(btn => {
-                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-white/70', 'rounded-md');
+                    btn.classList.remove('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
                     btn.classList.add('text-gray-500', 'font-medium');
                 });
                 const active = document.getElementById('tf-' + tf);
                 if (active) {
                     active.classList.remove('text-gray-500', 'font-medium');
-                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-white/70', 'rounded-md');
+                    active.classList.add('text-[#0c4a7e]', 'font-bold', 'bg-blue-50/50');
                 }
-                loadGoldChart(tf);
+                const intervalMap = { '1h': '60', '4h': '240', '1d': 'D' };
+                const container = document.querySelector('.tradingview-widget-container');
+                if (container) {
+                    container.innerHTML = `<div class="tradingview-widget-container__widget" style="height:100%;width:100%"></div>`;
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+                    script.async = true;
+                    script.text = JSON.stringify({
+                        autosize: true,
+                        symbol: "TVC:GOLD",
+                        interval: intervalMap[tf] || '240',
+                        timezone: "Asia/Bangkok",
+                        theme: "light",
+                        style: "1",
+                        locale: "th",
+                        enable_publishing: false,
+                        hide_top_toolbar: true,
+                        hide_legend: true,
+                        save_image: false,
+                        calendar: false,
+                        hide_volume: true,
+                        support_host: "https://www.tradingview.com"
+                    });
+                    container.appendChild(script);
+                }
             } catch (err) {
                 console.error('Chart timeframe error:', err);
             }
@@ -1691,12 +1459,12 @@
         // แสดงผลสรุปพอร์ตทองคำ พร้อมกำไร/ขาดทุนทศนิยม 2 ตำแหน่ง
         function renderPortfolioSummary() {
             document.getElementById('total-grams').innerText = portfolio.totalGrams.toFixed(4);
-            document.getElementById('total-cost').innerText = formatTHB(portfolio.totalCost, 2);
+            document.getElementById('total-cost').innerText = portfolio.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
 
             const currentVal = portfolio.totalGrams > 0 ? (portfolio.totalGrams / BAHT_TO_GRAM) * marketState.buyPrice : 0;
             const pnl = Number((currentVal - portfolio.totalCost).toFixed(2));
 
-            document.getElementById('current-value').innerText = formatTHB(currentVal, 2);
+            document.getElementById('current-value').innerText = currentVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
             
             const pnlContainer = document.getElementById('total-pnl-container');
             const pnlEl = document.getElementById('total-pnl');
@@ -1775,11 +1543,11 @@
                             <div class="col-span-6 tx-sub-box rounded-xl p-2.5 space-y-1 text-[12px]">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคา</span>
-                                    <span class="font-bold text-[#333333]">${formatTHB(order.goldPrice)}</span>
+                                    <span class="font-bold text-[#333333]">${order.goldPrice.toLocaleString('en-US')} ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">ราคารวม</span>
-                                    <span class="font-bold text-[#333333]">${formatTHB(order.totalAmount, 2)}</span>
+                                    <span class="font-bold text-[#333333]">${order.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ฿</span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">กำไรขาดทุน</span>
@@ -1822,16 +1590,16 @@
                 badge.innerText = 'สั่งซื้อ';
                 badge.className = 'px-3 py-1 rounded-full text-xs font-bold text-white bg-[#059669]';
                 title.innerText = 'ซื้อทองคำออม NOW (96.5%)';
-                priceEl.innerText = formatTHB(marketState.sellPrice);
+                priceEl.innerText = marketState.sellPrice.toLocaleString('en-US') + ' ฿';
                 availLabel.innerText = 'เงินสดคงเหลือ';
-                availVal.innerText = formatTHB(portfolio.cashBalance, 2);
+                availVal.innerText = portfolio.cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' ฿';
                 confirmBtn.innerText = 'ยืนยันคำสั่งซื้อ';
                 confirmBtn.className = 'w-full py-3.5 rounded-xl text-white font-bold text-base shadow-lg bg-[#059669] hover:opacity-95 transition';
             } else {
                 badge.innerText = 'สั่งขาย';
                 badge.className = 'px-3 py-1 rounded-full text-xs font-bold text-white bg-[#e63946]';
                 title.innerText = 'ขายทองคำออม NOW (96.5%)';
-                priceEl.innerText = formatTHB(marketState.buyPrice);
+                priceEl.innerText = marketState.buyPrice.toLocaleString('en-US') + ' ฿';
                 availLabel.innerText = 'ทองคำคงเหลือ';
                 availVal.innerText = portfolio.totalGrams.toFixed(4) + ' กรัม';
                 confirmBtn.innerText = 'ยืนยันคำสั่งขาย';
@@ -1919,7 +1687,7 @@
                 resultEl.innerText = grams.toFixed(4) + ' กรัม';
             } else {
                 const thb = (rawVal / BAHT_TO_GRAM) * activePrice;
-                resultEl.innerText = formatTHB(thb, 2);
+                resultEl.innerText = thb.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
             }
         }
 
@@ -2047,7 +1815,7 @@
             filterOrders('ALL');
             savePortfolio();
             renderAll();
-            showToast('เริ่มพอร์ตใหม่ เงินสด ฿ 1,000,000');
+            showToast('เริ่มพอร์ตใหม่ เงินสด 1,000,000 ฿');
         }
 
         // อัปเดตเวลาปัจจุบันบนหน้าจอ
